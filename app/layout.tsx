@@ -15,7 +15,10 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Stadio TV | Fútbol en Vivo HD",
   description: "La mejor plataforma para ver tus partidos favoritos en vivo y en máxima calidad.",
-};;
+  icons: {
+    icon: "/logo.png",
+  },
+};
 
 export default function RootLayout({
   children,

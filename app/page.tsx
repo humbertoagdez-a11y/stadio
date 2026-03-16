@@ -1,165 +1,165 @@
 "use client";
+import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 
 export default function Home() {
   const [matches, setMatches] = useState<any[]>([]);
   const [isClient, setIsClient] = useState(false);
-  const [clickedAds, setClickedAds] = useState<{ [key: string]: boolean }>({});
-  const [isLoading, setIsLoading] = useState(true);
+  const [clickedAds, setClickedAds] = useState<{ [key: number]: boolean }>({});
 
   useEffect(() => {
     setIsClient(true);
+    
     const fetchMatches = async () => {
-      const { data } = await supabase.from('matches').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase
+        .from('matches')
+        .select('*')
+        .order('created_at', { ascending: false });
+        
       if (data) setMatches(data);
-      setIsLoading(false);
     };
+
     fetchMatches();
   }, []);
 
   if (!isClient) return null;
 
-  const handleWatch = (matchId: number, channelIndex: number, adLink: string, realLink: string) => {
-    const key = `${matchId}-${channelIndex}`;
-    if (!clickedAds[key]) {
-      window.open(adLink, '_blank');
-      setClickedAds(prev => ({ ...prev, [key]: true }));
+  const handlePlayClick = (e: React.MouseEvent, match: any) => {
+    e.preventDefault();
+    if (!clickedAds[match.id]) {
+      window.open(match.ad_link, '_blank');
+      setClickedAds(prev => ({ ...prev, [match.id]: true }));
     } else {
-      window.open(realLink, '_self');
+      window.open(match.real_link, '_self'); 
     }
   };
 
-  const hero = matches.length > 0 ? matches[0] : null;
+  const heroMatch = matches.length > 0 ? matches[0] : null;
+
+  const groupedMatches = matches.reduce((acc, match) => {
+    (acc[match.competition] = acc[match.competition] || []).push(match);
+    return acc;
+  }, {});
 
   return (
-    <main className="min-h-screen bg-[#050505] text-white font-sans selection:bg-red-600 selection:text-white pb-16 overflow-x-hidden">
+    <main className="min-h-screen bg-[#050505] text-white font-sans overflow-x-hidden selection:bg-red-600 selection:text-white pb-20">
       
-      {/* NAVBAR */}
-      <nav className="fixed top-0 w-full px-6 md:px-16 py-6 flex justify-between items-center z-50 bg-gradient-to-b from-[#050505]/90 to-transparent">
-        <h1 className="text-3xl font-black text-red-600 tracking-tighter drop-shadow-md">STADIO</h1>
-        <div className="hidden md:flex gap-8 text-sm font-bold uppercase tracking-widest text-gray-300">
-          <span className="text-white cursor-default drop-shadow-md">En Vivo</span>
-          <span className="hover:text-white cursor-pointer transition-colors drop-shadow-md">Explorar</span>
+      {/* NAVBAR: Fondo sólido para evitar superposiciones */}
+      <nav className="fixed w-full px-4 md:px-8 py-3 flex justify-between items-center z-50 bg-[#050505] border-b border-white/10 shadow-lg">
+        <h1 className="text-2xl md:text-3xl font-black tracking-tighter text-red-600">STADIO</h1>
+        <div className="space-x-6 text-sm text-gray-300 font-medium hidden md:flex items-center">
+          <Link href="#" className="text-white font-bold">Inicio</Link>
+          <Link href="#" className="hover:text-white transition-colors">Competiciones</Link>
         </div>
+        <button className="md:hidden text-white">
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
+        </button>
       </nav>
 
-      {/* PANTALLA DE CARGA */}
-      {isLoading && (
-        <div className="h-screen flex items-center justify-center">
-          <div className="w-12 h-12 border-4 border-red-600/30 border-t-red-600 rounded-full animate-spin"></div>
-        </div>
-      )}
-
-      {/* HERO SECTION CORREGIDO */}
-      {!isLoading && hero && (
-        <section className="relative min-h-[90vh] flex flex-col justify-center pt-32 pb-24 px-6 md:px-16 w-full">
-          {/* FONDOS Y DEGRADADOS */}
+      {/* HERO SECTION: Compacto en móviles, expansivo en PC */}
+      {heroMatch && (
+        <section className="relative pt-20 pb-8 md:pt-0 md:pb-24 min-h-[45vh] md:min-h-[75vh] w-full flex items-end px-4 md:px-12 lg:px-16 mt-12 md:mt-0 border-b border-gray-900">
           <div className="absolute inset-0 z-0">
-            <img src={hero.poster_url} alt="Poster" className="w-full h-full object-cover opacity-40" />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/60 to-transparent" />
-            <div className="absolute inset-0 bg-gradient-to-r from-[#050505] via-[#050505]/40 to-transparent" />
+            <img src={heroMatch.poster_url} alt="Fondo" className="w-full h-full object-cover opacity-40" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/80 to-transparent"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-[#050505] via-[#050505]/50 to-transparent hidden md:block"></div>
           </div>
-          
-          {/* CONTENIDO BIEN POSICIONADO */}
-          <div className="relative z-10 w-full max-w-5xl space-y-6">
-            
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="bg-red-600 px-3 py-1 text-xs font-black uppercase tracking-widest rounded shadow-lg shadow-red-600/30">En Vivo</span>
-              <span className="bg-white/10 backdrop-blur-md border border-white/10 px-3 py-1 text-xs font-bold uppercase tracking-widest rounded">{hero.competition}</span>
+
+          <div className="relative z-10 w-full max-w-4xl">
+            <div className="flex flex-wrap items-center gap-2 mb-2 md:mb-4">
+              <span className="bg-red-600 text-white text-[10px] md:text-xs font-bold px-2 py-1 rounded-sm uppercase tracking-widest animate-pulse">En Vivo</span>
+              <span className="text-gray-300 text-[10px] md:text-xs font-bold tracking-widest border border-white/20 px-2 py-1 rounded-sm uppercase bg-black/50 backdrop-blur-sm">{heroMatch.competition}</span>
             </div>
             
-            <h1 className="font-black italic tracking-tighter uppercase drop-shadow-2xl leading-[0.95] text-5xl md:text-7xl lg:text-8xl flex flex-col items-start gap-1">
-              <span className="text-white">{hero.home_team}</span>
-              <div className="flex items-center gap-4">
-                <span className="text-red-600 text-4xl md:text-6xl">VS</span>
-                <span className="text-gray-200">{hero.away_team}</span>
-              </div>
+            {/* Título adaptativo */}
+            <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-black leading-tight mb-2 uppercase drop-shadow-2xl">
+              {heroMatch.home_team} <br className="hidden md:block"/><span className="text-red-600 italic text-2xl md:text-5xl">VS</span> {heroMatch.away_team}
             </h1>
             
-            <p className="text-sm md:text-base text-gray-300 font-medium leading-relaxed max-w-2xl border-l-2 border-red-600 pl-4 drop-shadow-md">
-              {hero.description}
+            {/* Descripción: Oculta en móviles para ahorrar espacio */}
+            <p className="hidden md:block text-gray-300 text-sm md:text-lg mb-8 line-clamp-3 max-w-2xl text-shadow">
+              {heroMatch.description}
             </p>
-            
-            {hero.schedules && hero.schedules.length > 0 && (
-              <div className="flex flex-wrap gap-3 pt-2 text-gray-400 font-bold text-xs">
-                {hero.schedules.map((s:any, i:number) => (
-                  <span key={i} className="flex items-center gap-1.5 bg-black/40 border border-white/10 px-3 py-1.5 rounded">
-                    <span className="text-red-500">⏱</span> {s.time} <span className="text-gray-500 uppercase">{s.region}</span>
-                  </span>
-                ))}
-              </div>
-            )}
-            
-            <div className="flex flex-wrap gap-4 pt-4">
-              {hero.channels?.map((chan: any, i: number) => (
-                <button 
-                  key={i}
-                  onClick={() => handleWatch(hero.id, i, chan.adLink, chan.realLink)}
-                  className={`px-8 py-4 rounded font-black transition-all transform active:scale-95 text-sm uppercase tracking-wide flex items-center gap-2 ${
-                    clickedAds[`${hero.id}-${i}`] 
-                    ? 'bg-green-600 text-white hover:bg-green-500 shadow-lg shadow-green-600/30' 
-                    : 'bg-white text-black hover:bg-gray-200 shadow-lg'
-                  }`}
-                >
-                  <span>{clickedAds[`${hero.id}-${i}`] ? '▶ VER' : '▶ DESBLOQUEAR'}</span>
-                  <span>{chan.name}</span>
-                </button>
-              ))}
+
+            {/* Botón premium */}
+            <div className="mt-4 md:mt-0 w-full sm:w-auto">
+              <button 
+                onClick={(e) => handlePlayClick(e, heroMatch)}
+                className={`w-full sm:w-auto justify-center ${clickedAds[heroMatch.id] ? 'bg-green-600 text-white hover:bg-green-500 shadow-green-900/50' : 'bg-white text-black hover:bg-gray-200 shadow-white/20'} font-bold px-6 py-3 md:px-8 md:py-4 rounded md:rounded-lg transition-all active:scale-95 flex items-center gap-2 shadow-lg`}
+              >
+                <svg className="w-5 h-5 md:w-6 md:h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                {clickedAds[heroMatch.id] ? 'VER TRANSMISIÓN HD' : 'DESBLOQUEAR OPCIÓN 1'}
+              </button>
             </div>
           </div>
         </section>
       )}
 
-      {/* GRILLA CON TODOS LOS PARTIDOS INCLUYENDO EL PRINCIPAL */}
-      {!isLoading && matches.length > 0 && (
-        <section className="relative z-20 px-6 md:px-16 -mt-16 md:-mt-24 space-y-6">
-          <h2 className="text-2xl font-black uppercase tracking-widest text-gray-200 drop-shadow-lg">Cartelera Completa</h2>
+      {/* CARTELERA: Sistema de Grid (Cuadrícula) */}
+      <div className="mt-8 md:mt-12 space-y-10">
+        {matches.length === 0 ? (
+          <div className="flex flex-col items-center justify-center mt-20 opacity-50">
+             <p className="text-gray-400 text-lg">Aún no hay transmisiones activas.</p>
+          </div>
+        ) : (
+          Object.keys(groupedMatches).map((cupName) => (
+            <section key={cupName} className="w-full">
+              {/* Título de la competición con detalle rojo */}
+              <div className="flex items-center gap-3 px-4 md:px-12 lg:px-16 mb-4">
+                <div className="w-1.5 h-6 bg-red-600 rounded-full"></div>
+                <h2 className="text-lg md:text-2xl font-black text-white uppercase tracking-wide">{cupName}</h2>
+              </div>
+              
+              {/* Cuadrícula responsiva de tarjetas */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 px-4 md:px-12 lg:px-16">
+                {groupedMatches[cupName].map((match: any) => (
+                  <div 
+                    key={match.id} 
+                    onClick={(e) => handlePlayClick(e, match)}
+                    className="cursor-pointer aspect-video relative rounded-xl overflow-hidden border border-gray-800 bg-[#0a0a0a] group hover:border-red-600/50 transition-colors shadow-lg"
+                  >
+                    <img src={match.poster_url} alt="Poster" className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:opacity-30 transition-opacity duration-300" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {matches.map(m => (
-              <div key={m.id} className="bg-[#111] rounded-lg overflow-hidden border border-white/5 hover:border-white/20 transition-all group shadow-2xl flex flex-col">
-                
-                <div className="relative aspect-video overflow-hidden bg-black">
-                  <img src={m.poster_url} alt="Poster" className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity duration-300 group-hover:scale-105" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#111] to-transparent" />
-                  <div className="absolute top-3 left-3">
-                    <span className="bg-black/60 backdrop-blur-md px-2 py-1 rounded text-[9px] font-black text-red-500 uppercase tracking-widest border border-white/10">{m.competition}</span>
-                  </div>
-                </div>
-                
-                <div className="p-5 flex-1 flex flex-col justify-between space-y-4 -mt-2 relative z-10">
-                  <div className="space-y-2">
-                    <h3 className="text-base font-black italic uppercase leading-tight text-white">{m.home_team} vs {m.away_team}</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {m.schedules?.map((s:any, i:number) => (
-                         <span key={i} className="text-[10px] bg-white/5 border border-white/5 px-2 py-1 rounded font-bold text-gray-400">⏱ {s.time} {s.region}</span>
-                      ))}
+                    {/* Badge superior izquierdo */}
+                    <div className="absolute top-3 left-3 z-10">
+                      {clickedAds[match.id] ? (
+                        <span className="bg-green-600 text-white text-[10px] font-bold px-2 py-1 rounded shadow-lg uppercase">Listo</span>
+                      ) : (
+                        <span className="bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded shadow-lg uppercase">Requiere Clic</span>
+                      )}
+                    </div>
+
+                    {/* Horario superior derecho */}
+                    {match.schedules && match.schedules.length > 0 && (
+                      <div className="absolute top-3 right-3 z-10">
+                         <span className="bg-black/80 backdrop-blur-md text-gray-200 border border-gray-700 text-[10px] font-bold px-2 py-1 rounded flex items-center gap-1">
+                           ⏱ {match.schedules[0].time} {match.schedules[0].region}
+                         </span>
+                      </div>
+                    )}
+
+                    {/* Botón Play central */}
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                       <div className={`w-12 h-12 rounded-full flex items-center justify-center backdrop-blur-sm border transition-all duration-300 ${clickedAds[match.id] ? 'bg-green-600/20 border-green-500 text-green-400 scale-110' : 'bg-white/10 border-white/20 text-white group-hover:bg-red-600/20 group-hover:border-red-600 group-hover:text-red-500 group-hover:scale-110'}`}>
+                          <svg className="w-5 h-5 ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                       </div>
+                    </div>
+
+                    {/* Nombres de los equipos abajo */}
+                    <div className="absolute bottom-0 left-0 w-full p-4 z-10 bg-gradient-to-t from-black to-transparent">
+                      <h3 className="text-sm md:text-base font-black leading-tight text-white uppercase italic text-center drop-shadow-md">
+                        {match.home_team} <span className="text-red-500">VS</span> {match.away_team}
+                      </h3>
                     </div>
                   </div>
-
-                  <div className="space-y-2 pt-2">
-                    {m.channels?.map((chan: any, i: number) => (
-                      <button 
-                        key={i}
-                        onClick={() => handleWatch(m.id, i, chan.adLink, chan.realLink)}
-                        className={`w-full p-3 rounded text-[11px] font-black flex justify-between items-center transition-all uppercase tracking-wider ${
-                          clickedAds[`${m.id}-${i}`] 
-                          ? 'bg-green-600/20 text-green-500 border border-green-500/30' 
-                          : 'bg-white/10 text-white hover:bg-red-600 border border-transparent'
-                        }`}
-                      >
-                        <span className="truncate pr-2">{chan.name}</span>
-                        <span>{clickedAds[`${m.id}-${i}`] ? 'ONLINE' : '▶'}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </section>
-      )}
+            </section>
+          ))
+        )}
+      </div>
     </main>
   );
 }

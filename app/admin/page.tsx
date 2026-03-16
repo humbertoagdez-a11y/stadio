@@ -7,13 +7,8 @@ export default function AdminPanel() {
   const [isClient, setIsClient] = useState(false);
 
   const fetchMatches = async () => {
-    const { data, error } = await supabase
-      .from('matches')
-      .select('*')
-      .order('created_at', { ascending: false });
-      
+    const { data } = await supabase.from('matches').select('*').order('created_at', { ascending: false });
     if (data) setMatches(data);
-    if (error) console.error("Error al cargar:", error);
   };
 
   useEffect(() => {
@@ -22,168 +17,109 @@ export default function AdminPanel() {
   }, []);
 
   const [formData, setFormData] = useState({
-    homeTeam: '',
-    awayTeam: '',
-    competition: '',
-    adLink: '',
-    realLink: '',
-    posterUrl: '',
-    description: 'Disfruta de este gran encuentro en vivo y en máxima calidad.'
+    homeTeam: '', awayTeam: '', competition: '', posterUrl: '', description: ''
   });
 
   const [currentSchedules, setCurrentSchedules] = useState([{ time: '20:30', region: '🇦🇷 🇵🇾' }]);
+  const [currentChannels, setCurrentChannels] = useState([{ name: 'Opción 1 HD', adLink: '', realLink: '' }]);
 
+  // Funciones para Horarios
   const addSchedule = () => setCurrentSchedules([...currentSchedules, { time: '', region: '' }]);
   const updateSchedule = (index: number, field: string, value: string) => {
-    const newSchedules = [...currentSchedules];
-    newSchedules[index] = { ...newSchedules[index], [field]: value };
-    setCurrentSchedules(newSchedules);
+    const newS = [...currentSchedules];
+    newS[index] = { ...newS[index], [field]: value };
+    setCurrentSchedules(newS);
   };
-  const removeSchedule = (index: number) => setCurrentSchedules(currentSchedules.filter((_, i) => i !== index));
+
+  // Funciones para Canales
+  const addChannel = () => setCurrentChannels([...currentChannels, { name: `Opción ${currentChannels.length + 1} HD`, adLink: '', realLink: '' }]);
+  const updateChannel = (index: number, field: string, value: string) => {
+    const newC = [...currentChannels];
+    newC[index] = { ...newC[index], [field]: value };
+    setCurrentChannels(newC);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     const newMatch = {
       home_team: formData.homeTeam,
       away_team: formData.awayTeam,
       competition: formData.competition,
-      ad_link: formData.adLink,
-      real_link: formData.realLink,
-      poster_url: formData.posterUrl || 'https://images.unsplash.com/photo-1518605368461-1ee7116cbce5?q=80&w=1000&auto=format&fit=crop',
+      poster_url: formData.posterUrl || 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=1000',
       description: formData.description,
-      schedules: currentSchedules
+      schedules: currentSchedules,
+      channels: currentChannels,
+      ad_link: currentChannels[0].adLink, // Compatibilidad
+      real_link: currentChannels[0].realLink // Compatibilidad
     };
-    
-    const { data, error } = await supabase
-      .from('matches')
-      .insert([newMatch])
-      .select();
 
-    if (!error && data) {
+    const { data, error } = await supabase.from('matches').insert([newMatch]).select();
+    if (!error) {
       setMatches([data[0], ...matches]);
-      setCurrentSchedules([{ time: '20:30', region: '🇦🇷 🇵🇾' }]);
-      // Aquí está la corrección de TypeScript
+      alert("¡Encuentro publicado!");
       (e.currentTarget as HTMLFormElement).reset();
-      alert("¡Partido publicado con éxito en la nube!");
-    } else {
-      alert("Error al publicar el partido");
-      console.error(error);
     }
   };
 
   const handleDelete = async (id: number) => {
-    const confirmDelete = window.confirm("¿Seguro que quieres eliminar este partido de la plataforma?");
-    if (!confirmDelete) return;
-
-    const { error } = await supabase
-      .from('matches')
-      .delete()
-      .eq('id', id);
-
-    if (!error) {
-      setMatches(matches.filter(match => match.id !== id));
+    if (confirm("¿Eliminar partido?")) {
+      await supabase.from('matches').delete().eq('id', id);
+      setMatches(matches.filter(m => m.id !== id));
     }
   };
 
   if (!isClient) return null;
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white p-8 font-sans">
-      <div className="max-w-4xl mx-auto space-y-12">
-        <section>
-          <h1 className="text-3xl font-bold mb-8 tracking-tight">Stadio <span className="text-red-600">Admin</span></h1>
-          <form onSubmit={handleSubmit} className="bg-[#111] border border-gray-800 p-6 rounded-xl space-y-6 shadow-2xl">
-            
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Local</label>
-                <input required type="text" placeholder="Ej. LA Galaxy" className="w-full bg-black border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-red-600"
-                  onChange={e => setFormData({...formData, homeTeam: e.target.value})} />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Visitante</label>
-                <input required type="text" placeholder="Ej. Mount Pleasant" className="w-full bg-black border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-red-600"
-                  onChange={e => setFormData({...formData, awayTeam: e.target.value})} />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Competición</label>
-                <input required type="text" placeholder="Ej. Concachampions" className="w-full bg-black border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-red-600"
-                  onChange={e => setFormData({...formData, competition: e.target.value})} />
-              </div>
+    <div className="min-h-screen bg-[#0a0a0a] text-white p-4 md:p-8 font-sans">
+      <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        {/* FORMULARIO */}
+        <div className="lg:col-span-2 space-y-6">
+          <h1 className="text-3xl font-black text-red-600 uppercase italic">Publicar Evento</h1>
+          <form onSubmit={handleSubmit} className="bg-[#111] p-6 rounded-2xl border border-white/5 space-y-6 shadow-2xl">
+            <div className="grid grid-cols-2 gap-4">
+              <input required placeholder="Equipo Local" className="bg-black border border-white/10 p-3 rounded-xl" onChange={e => setFormData({...formData, homeTeam: e.target.value})} />
+              <input required placeholder="Equipo Visitante" className="bg-black border border-white/10 p-3 rounded-xl" onChange={e => setFormData({...formData, awayTeam: e.target.value})} />
             </div>
+            <input required placeholder="Competición (Ej: Premier League)" className="w-full bg-black border border-white/10 p-3 rounded-xl" onChange={e => setFormData({...formData, competition: e.target.value})} />
+            <textarea required placeholder="Descripción del encuentro..." className="w-full bg-black border border-white/10 p-3 rounded-xl h-24" onChange={e => setFormData({...formData, description: e.target.value})} />
+            <input placeholder="URL del Poster (Imagen HD)" className="w-full bg-black border border-white/10 p-3 rounded-xl" onChange={e => setFormData({...formData, posterUrl: e.target.value})} />
 
-            <div className="bg-[#1a1a1a] p-4 rounded-lg border border-gray-800">
-              <div className="flex justify-between items-center mb-4">
-                <label className="block text-sm font-bold text-white">Horarios</label>
-                <button type="button" onClick={addSchedule} className="text-sm bg-gray-800 hover:bg-gray-700 px-3 py-1 rounded text-white transition-colors">
-                  + Agregar horario
-                </button>
+            {/* SECCIÓN DE CANALES */}
+            <div className="space-y-4 border-t border-white/5 pt-4">
+              <div className="flex justify-between items-center">
+                <h3 className="font-bold text-red-500 uppercase text-sm">Canales de Transmisión</h3>
+                <button type="button" onClick={addChannel} className="bg-white/10 px-3 py-1 rounded-lg text-xs hover:bg-white/20">+ Agregar Canal</button>
               </div>
-              <div className="space-y-3">
-                {currentSchedules.map((sched, index) => (
-                  <div key={index} className="flex gap-4 items-center">
-                    <input required type="time" value={sched.time} className="bg-black border border-gray-700 rounded-lg p-3 text-white focus:border-red-600 [color-scheme:dark]"
-                      onChange={e => updateSchedule(index, 'time', e.target.value)} />
-                    <input required type="text" placeholder="Ej. 🇦🇷 🇵🇾" value={sched.region} className="flex-1 bg-black border border-gray-700 rounded-lg p-3 text-white focus:border-red-600"
-                      onChange={e => updateSchedule(index, 'region', e.target.value)} />
-                    {currentSchedules.length > 1 && (
-                      <button type="button" onClick={() => removeSchedule(index)} className="text-red-500 hover:text-red-400 px-2 font-bold">✕</button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-6 p-4 border border-red-900/50 bg-red-900/10 rounded-lg">
-              <div>
-                <label className="block text-sm font-bold text-red-400 mb-2">1. Adsterra (Publicidad)</label>
-                <input required type="url" placeholder="https://adsterra..." className="w-full bg-black border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-red-600"
-                  onChange={e => setFormData({...formData, adLink: e.target.value})} />
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-green-400 mb-2">2. Enlace Real</label>
-                <input required type="url" placeholder="https://stream..." className="w-full bg-black border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-green-600"
-                  onChange={e => setFormData({...formData, realLink: e.target.value})} />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4">
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">URL del Póster (Opcional, imagen HD)</label>
-                <input type="url" placeholder="https://..." className="w-full bg-black border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-red-600"
-                  onChange={e => setFormData({...formData, posterUrl: e.target.value})} />
-              </div>
-            </div>
-
-            <button type="submit" className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-lg transition-colors text-lg">
-              Publicar Partido
-            </button>
-          </form>
-        </section>
-
-        <section>
-          <h2 className="text-xl font-bold mb-4 border-b border-gray-800 pb-2">En la Nube ({matches.length})</h2>
-          <div className="space-y-3">
-            {matches.map((match) => (
-              <div key={match.id} className="bg-[#111] border border-gray-800 rounded-lg p-4 flex justify-between items-center">
-                <div>
-                  <h3 className="font-bold text-lg">{match.home_team} vs {match.away_team} <span className="text-xs text-red-500 border border-red-500/30 bg-red-500/10 px-2 py-1 rounded ml-2">{match.competition}</span></h3>
-                  <div className="text-sm text-gray-400 mt-1 space-x-3">
-                    {match.schedules?.map((s: any, i: number) => (
-                      <span key={i}>⏱ {s.time} {s.region}</span>
-                    ))}
+              {currentChannels.map((chan, i) => (
+                <div key={i} className="bg-black/40 p-4 rounded-xl border border-white/5 space-y-3">
+                  <input value={chan.name} className="bg-transparent font-bold text-white outline-none w-full" onChange={e => updateChannel(i, 'name', e.target.value)} />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <input required placeholder="Link Adsterra" className="bg-black border border-red-900/30 p-2 rounded-lg text-xs" onChange={e => updateChannel(i, 'adLink', e.target.value)} />
+                    <input required placeholder="Link Real (Stream)" className="bg-black border border-green-900/30 p-2 rounded-lg text-xs" onChange={e => updateChannel(i, 'realLink', e.target.value)} />
                   </div>
                 </div>
-                <button onClick={() => handleDelete(match.id)} className="bg-red-900/30 text-red-500 hover:bg-red-600 hover:text-white px-4 py-2 rounded-md text-sm font-semibold transition-colors">
-                  Eliminar
-                </button>
-              </div>
-            ))}
-            {matches.length === 0 && <p className="text-gray-500">No hay partidos en la base de datos.</p>}
-          </div>
-        </section>
+              ))}
+            </div>
 
+            <button type="submit" className="w-full bg-red-600 hover:bg-red-700 py-4 rounded-xl font-black text-xl transition-all shadow-lg shadow-red-600/20">PUBLICAR AHORA</button>
+          </form>
+        </div>
+
+        {/* LISTADO LATERAL */}
+        <div className="space-y-4">
+          <h2 className="text-xl font-bold uppercase text-gray-500">Activos</h2>
+          {matches.map(m => (
+            <div key={m.id} className="bg-[#111] p-4 rounded-xl border border-white/5 flex justify-between items-center group">
+              <div>
+                <p className="text-lg font-bold leading-tight">{m.home_team} vs {m.away_team}</p>
+                <p className="text-[10px] text-red-500 uppercase font-black">{m.competition}</p>
+              </div>
+              <button onClick={() => handleDelete(m.id)} className="text-red-600 opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

@@ -6,7 +6,6 @@ export default function AdminPanel() {
   const [matches, setMatches] = useState<any[]>([]);
   const [isClient, setIsClient] = useState(false);
 
-  // 1. Obtener los partidos reales desde Supabase al cargar la página
   const fetchMatches = async () => {
     const { data, error } = await supabase
       .from('matches')
@@ -42,7 +41,6 @@ export default function AdminPanel() {
   };
   const removeSchedule = (index: number) => setCurrentSchedules(currentSchedules.filter((_, i) => i !== index));
 
-  // 2. Guardar el partido en la base de datos real
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -65,7 +63,8 @@ export default function AdminPanel() {
     if (!error && data) {
       setMatches([data[0], ...matches]);
       setCurrentSchedules([{ time: '20:30', region: '🇦🇷 🇵🇾' }]);
-      e.currentTarget.reset();
+      // Aquí está la corrección de TypeScript
+      (e.currentTarget as HTMLFormElement).reset();
       alert("¡Partido publicado con éxito en la nube!");
     } else {
       alert("Error al publicar el partido");
@@ -73,7 +72,6 @@ export default function AdminPanel() {
     }
   };
 
-  // 3. Eliminar el partido de la base de datos real
   const handleDelete = async (id: number) => {
     const confirmDelete = window.confirm("¿Seguro que quieres eliminar este partido de la plataforma?");
     if (!confirmDelete) return;

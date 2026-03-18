@@ -1,67 +1,43 @@
-"use client";
-import { useEffect, useState } from 'react';
+// LA MAGIA ANTI-CACHÉ: Evita el error 404 estático en Cloudflare
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 import { supabase } from '@/lib/supabase';
+import { Metadata } from 'next';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
 
-export default function MatchPage() {
-  const params = useParams();
-  
-  // Extraemos el slug de forma segura
-  const rawSlug = params?.slug;
-  const matchSlug = Array.isArray(rawSlug) ? rawSlug[0] : rawSlug;
+// SEO Dinámico para redes sociales
+export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+  const { data: match } = await supabase.from('matches').select('*').eq('slug', params.slug).single();
+  if (!match) return { title: 'Partido No Encontrado - STADIOTV' };
+  return {
+    title: `Ver ${match.home_team} vs ${match.away_team} En Vivo - ${match.competition} - STADIOTV`,
+    description: match.description_short || `Previa y transmisión HD de ${match.home_team} vs ${match.away_team}.`,
+    openGraph: { images: [match.poster_url || ''] },
+  };
+}
 
-  const [match, setMatch] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!matchSlug) return;
-
-    const fetchMatch = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('matches')
-          .select('*')
-          .eq('slug', matchSlug)
-          .single();
-        
-        if (data && !error) {
-          setMatch(data);
-        } else {
-          console.error("No se encontró el partido en la BD.");
-        }
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchMatch();
-  }, [matchSlug]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#050505] flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
-  }
+export default async function MatchPage({ params }: { params: { slug: string } }) {
+  // Conexión en tiempo real buscando el SLUG exacto
+  const { data: match } = await supabase.from('matches').select('*').eq('slug', params.slug).single();
 
   if (!match) {
     return (
       <main className="min-h-screen bg-[#050505] flex flex-col items-center justify-center gap-6 text-white p-4 text-center">
         <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tighter text-red-600">Evento No Encontrado</h2>
-        <p className="text-gray-400">El partido que buscas no existe o la URL es incorrecta.</p>
-        <Link href="/" className="bg-white text-black font-black px-8 py-4 rounded hover:bg-gray-200 transition-all uppercase shadow-lg">Volver al Inicio</Link>
+        <p className="text-gray-400">El partido que buscas no existe o ha sido eliminado.</p>
+        <Link href="/" className="bg-white text-black font-black px-8 py-4 rounded hover:bg-gray-200 transition-all uppercase shadow-lg active:scale-95">Volver al Inicio</Link>
       </main>
     );
   }
 
+  // Lista de bloques HTML infinitos ( custom_blocks )
   const htmlBlocks = match.custom_blocks || [];
 
   return (
     <main className="min-h-screen bg-[#050505] text-white font-sans selection:bg-red-600 pb-20">
       
+      {/* NAVBAR */}
       <nav className="fixed w-full px-4 md:px-8 py-4 flex justify-between items-center z-50 bg-[#050505]/90 backdrop-blur-md border-b border-white/10 shadow-lg">
         <Link href="/" className="flex items-center gap-2 group">
           <svg className="w-5 h-5 text-gray-400 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
@@ -73,15 +49,21 @@ export default function MatchPage() {
         </div>
       </nav>
 
-      {/* HERO SECTION PRO: Banner ajustado visualmente (55vh a 65vh) */}
-      <div className="relative w-full h-[55vh] md:h-[65vh] pt-16">
+      {/* HERO SECTION PRO: EL AJUSTE DE IMAGEN PERFECTO */}
+      {/* El contenedor mantiene el aspect ratio 16:9 y no roba toda la pantalla en PC (max-h) */}
+      <div className="relative w-full aspect-[16/9] max-h-[60vh] md:max-h-[65vh] overflow-hidden flex items-end pt-16 mt-16 md:mt-0 shadow-[0_0_60px_rgba(0,0,0,0.8)]">
         <div className="absolute inset-0 z-0">
-          <img src={match.poster_url} alt="Poster" className="w-full h-full object-cover opacity-60 md:opacity-40" />
+          {/* EL FIX DE LA IMAGEN: object-fit: cover + object-center */}
+          {/* Esto asegura que la imagen de image_0.png NO se estire y la acción (el VS central) esté centrada */}
+          <img src={match.poster_url} alt="Poster" className="w-full h-full object-cover object-center opacity-60 md:opacity-40 transition-opacity duration-300" />
+          
+          {/* Degradados suaves para fundir con el negro */}
           <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/80 to-transparent"></div>
-          <div className="absolute inset-0 bg-gradient-to-r from-[#050505] via-[#050505]/60 to-transparent hidden md:block w-full"></div>
+          {/* Degradado lateral solo en PC para limpiar el área del texto */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#050505] via-[#050505]/60 to-transparent hidden md:block w-3/4"></div>
         </div>
 
-        <div className="absolute bottom-0 left-0 w-full p-6 md:p-16 z-10 max-w-7xl mx-auto flex flex-col gap-4 md:gap-5">
+        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 md:px-12 lg:px-16 flex flex-col gap-4 md:gap-5 pb-8 md:pb-12">
            <div className="flex flex-wrap items-center gap-2 mb-1">
              <span className="bg-red-600 text-white text-[10px] md:text-xs font-bold px-3 py-1.5 rounded-sm uppercase tracking-widest flex items-center gap-1.5 shadow-lg">
                <div className="w-1.5 h-1.5 bg-white rounded-full"></div> COBERTURA
@@ -89,8 +71,8 @@ export default function MatchPage() {
              <span className="text-gray-200 text-[10px] md:text-xs font-bold tracking-widest border border-white/20 px-3 py-1.5 rounded-sm uppercase bg-black/50 backdrop-blur-sm">{match.competition}</span>
            </div>
            
-           <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-black mt-2 mb-2 uppercase leading-none italic drop-shadow-2xl tracking-tighter">
-             {match.home_team} <br className="hidden md:block"/><span className="text-red-600 text-3xl md:text-6xl mx-0 md:mx-2">VS</span> {match.away_team}
+           <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-black mt-2 mb-2 uppercase leading-none italic drop-shadow-2xl tracking-tighter max-w-5xl">
+             {match.home_team} <span className="text-red-600 text-2xl md:text-5xl mx-0 md:mx-2">VS</span> {match.away_team}
            </h1>
 
            {match.schedules && match.schedules.length > 0 && (
@@ -102,9 +84,10 @@ export default function MatchPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 md:px-8 py-12 flex flex-col lg:flex-row gap-12">
+      {/* CONTENIDO & REPRODUCTORES EN COLUMNAS PROPORCIONADAS */}
+      <div className="max-w-7xl mx-auto px-4 md:px-12 lg:px-16 py-12 flex flex-col lg:flex-row gap-12">
         
-        {/* Lado Principal */}
+        {/* Lado Principal: Previa y HTML Adicional */}
         <div className="flex-1 space-y-8 order-2 lg:order-1">
           <div className="bg-[#0a0a0a] border border-white/5 rounded-2xl p-6 md:p-10 shadow-xl relative">
             <h2 className="text-2xl md:text-3xl font-black mb-8 flex items-center gap-3"><div className="w-1.5 h-8 bg-red-600 rounded-full"></div> Análisis del Encuentro</h2>
@@ -113,16 +96,17 @@ export default function MatchPage() {
             </p>
           </div>
 
-          {/* RENDERIZADO HTML (TABLAS, ETC) */}
+          {/* RENDERIZADO DE BLOQUES HTML INFINITOS (Tablas, Iframes, etc) */}
           {htmlBlocks.length > 0 && htmlBlocks.map((htmlBlock: string, index: number) => (
              <div key={index} className="bg-[#0a0a0a] border border-white/5 rounded-2xl p-6 md:p-10 shadow-xl overflow-x-auto custom-scrollbar relative">
+                {/* overflow-x-auto asegura que si una tabla es muy ancha, se pueda hacer scroll horizontal en móvil */}
                 <div dangerouslySetInnerHTML={{ __html: htmlBlock }} className="prose prose-invert max-w-none prose-p:text-gray-300 prose-headings:text-white prose-a:text-red-500 font-medium leading-relaxed" />
              </div>
           ))}
         </div>
 
-        {/* Lado Lateral */}
-        <div className="w-full lg:w-[400px] space-y-8 order-1 lg:order-2">
+        {/* Lado Lateral: Monetización Adsterra / Transmisión */}
+        <div className="w-full lg:w-[380px] xl:w-[420px] space-y-8 order-1 lg:order-2">
           <div className="bg-[#0f0f0f] border border-red-600/30 rounded-2xl p-6 md:p-8 shadow-[0_0_40px_rgba(220,38,38,0.15)] sticky top-28 z-10 relative">
              <h3 className="text-2xl font-black uppercase text-center mb-8 tracking-tighter flex items-center justify-center gap-2.5">
                <span className="w-3 h-3 bg-red-600 rounded-full animate-pulse shadow-[0_0_10px_rgba(220,38,38,0.6)]"></span> Transmisión HD
@@ -147,7 +131,7 @@ export default function MatchPage() {
                   <p className="text-center text-gray-500 text-sm font-bold p-4 bg-black/40 rounded-xl border border-white/5">Enlaces no disponibles aún.</p>
                 )}
              </div>
-             <p className="text-center text-xs text-gray-500 mt-6 font-medium bg-black/40 p-3 rounded-xl border border-white/5">La señal se habilitará momentos antes del pitazo inicial.</p>
+             <p className="text-center text-[10px] md:text-xs text-gray-500 mt-6 font-medium bg-black/40 p-3 rounded-xl border border-white/5">La señal se habilitará momentos antes del pitazo inicial.</p>
           </div>
         </div>
 

@@ -11,7 +11,7 @@ export default function Home() {
   useEffect(() => {
     setIsClient(true);
     const fetchMatches = async () => {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('matches')
         .select('*')
         .order('created_at', { ascending: false });
@@ -22,7 +22,6 @@ export default function Home() {
 
   if (!isClient) return null;
 
-  // EFICIENCIA: Busca el partido destacado, si no hay, toma el primero.
   const heroMatch = matches.find(m => m.is_featured) || (matches.length > 0 ? matches[0] : null);
 
   const groupedByDate = matches.reduce((acc, match) => {
@@ -32,129 +31,67 @@ export default function Home() {
   }, {});
 
   return (
-    <main className="min-h-screen bg-[#050505] text-white font-sans overflow-x-hidden selection:bg-red-600 selection:text-white pb-20">
-      
-      {/* NAVBAR */}
+    <main className="min-h-screen bg-[#050505] text-white font-sans overflow-x-hidden selection:bg-red-600 pb-20">
       <nav className="fixed w-full px-4 md:px-8 py-4 flex justify-between items-center z-50 bg-[#050505]/95 backdrop-blur-md border-b border-white/10 shadow-lg">
         <Link href="/" className="flex items-center gap-2 group">
           <div className="w-2 h-6 bg-red-600"></div>
-          <h1 className="text-2xl md:text-3xl font-black tracking-tighter text-red-600 group-hover:scale-105 transition-transform">
-            STADIO<span className="text-white">TV</span>
-          </h1>
+          <h1 className="text-2xl md:text-3xl font-black tracking-tighter text-red-600">STADIO<span className="text-white">TV</span></h1>
         </Link>
-        
-        <div className="space-x-6 text-sm text-gray-300 font-medium hidden md:flex items-center">
+        <div className="space-x-6 text-sm text-gray-300 font-medium hidden md:flex">
           <Link href="/" className="text-white font-bold border-b-2 border-red-600 pb-1">Inicio</Link>
           <a href="#calendario" className="hover:text-white transition-colors">Cartelera</a>
         </div>
-        
         <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="md:hidden text-white p-2">
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isMobileMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} />
-          </svg>
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isMobileMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} /></svg>
         </button>
       </nav>
 
-      {/* MENÚ MÓVIL DESPLEGABLE */}
       {isMobileMenuOpen && (
-        <div className="fixed top-[68px] left-0 w-full bg-[#0a0a0a] border-b border-white/10 z-40 p-4 flex flex-col gap-4 md:hidden shadow-2xl">
-           <Link href="/" onClick={() => setIsMobileMenuOpen(false)} className="text-white font-bold text-lg">Inicio</Link>
-           <a href="#calendario" onClick={() => setIsMobileMenuOpen(false)} className="text-gray-400 font-bold text-lg">Cartelera</a>
+        <div className="fixed top-[68px] left-0 w-full bg-[#0a0a0a] border-b border-white/10 z-40 p-4 flex flex-col gap-4 md:hidden">
+           <Link href="/" onClick={() => setIsMobileMenuOpen(false)} className="text-white font-bold">Inicio</Link>
+           <a href="#calendario" onClick={() => setIsMobileMenuOpen(false)} className="text-gray-400 font-bold">Cartelera</a>
         </div>
       )}
 
-      {/* HERO SECTION PRO */}
       {heroMatch && (
-        <section className="relative pt-20 pb-8 md:pt-0 md:pb-24 min-h-[50vh] md:min-h-[85vh] w-full flex items-end px-4 md:px-12 lg:px-16 mt-12 md:mt-0 border-b border-gray-900">
+        <section className="relative pt-20 pb-8 md:pt-0 md:pb-24 min-h-[55vh] md:min-h-[80vh] w-full flex items-end px-4 md:px-12 lg:px-16 border-b border-white/5">
           <div className="absolute inset-0 z-0">
-            <img src={heroMatch.poster_url} alt="Fondo" className="w-full h-full object-cover opacity-60 md:opacity-50" />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/90 md:via-[#050505]/60 to-transparent"></div>
-            <div className="absolute inset-0 bg-gradient-to-r from-[#050505] via-[#050505]/90 to-transparent hidden md:block w-3/4"></div>
+            <img src={heroMatch.poster_url} alt="Fondo" className="w-full h-full object-cover opacity-50" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/80 to-transparent"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-[#050505] via-[#050505]/60 to-transparent hidden md:block w-3/4"></div>
           </div>
-
           <div className="relative z-10 w-full max-w-4xl">
-            <div className="flex flex-wrap items-center gap-2 mb-3">
-              <span className="bg-red-600 text-white text-[10px] md:text-xs font-bold px-2 py-1 rounded-sm uppercase tracking-widest animate-pulse flex items-center gap-1">
-                 <div className="w-1.5 h-1.5 bg-white rounded-full"></div> DESTACADO
-              </span>
-              <span className="text-gray-300 text-[10px] md:text-xs font-bold tracking-widest border border-white/20 px-2 py-1 rounded-sm uppercase bg-black/50 backdrop-blur-sm">{heroMatch.competition}</span>
-            </div>
-            
-            <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-black leading-none mb-4 uppercase drop-shadow-2xl tracking-tighter">
-              {heroMatch.home_team} <br className="hidden md:block"/><span className="text-red-600 italic text-3xl md:text-6xl">VS</span> {heroMatch.away_team}
+            <span className="bg-red-600 text-white text-[10px] font-bold px-2 py-1 uppercase tracking-widest animate-pulse">Destacado</span>
+            <h1 className="text-4xl md:text-8xl font-black mt-4 uppercase leading-none tracking-tighter italic">
+              {heroMatch.home_team} <br className="hidden md:block"/><span className="text-red-600">VS</span> {heroMatch.away_team}
             </h1>
-            
-            <p className="hidden md:block text-gray-300 text-sm md:text-lg mb-8 line-clamp-3 max-w-2xl text-shadow font-medium">
-              {heroMatch.description_short || heroMatch.description}
-            </p>
-
-            <div className="mt-4 md:mt-0 w-full sm:w-auto">
-              <Link href={`/partido/${heroMatch.slug}`}>
-                <button className="w-full sm:w-auto justify-center bg-red-600 text-white hover:bg-red-700 font-black px-6 py-4 md:px-10 md:py-5 rounded md:rounded-lg transition-all active:scale-95 flex items-center gap-3 shadow-[0_0_20px_rgba(220,38,38,0.3)]">
-                  <svg className="w-5 h-5 md:w-7 md:h-7" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                  ACCEDER AL EVENTO
-                </button>
-              </Link>
+            <p className="hidden md:block text-gray-400 text-lg mt-6 max-w-2xl">{heroMatch.description_short}</p>
+            <div className="mt-8">
+              <Link href={`/partido/${heroMatch.slug}`} className="inline-block bg-red-600 text-white font-black px-10 py-4 rounded hover:bg-red-700 transition-all uppercase tracking-tighter">Acceder al Evento</Link>
             </div>
           </div>
         </section>
       )}
 
-      {/* CARTELERA */}
-      <div id="calendario" className="mt-12 md:mt-16 space-y-12">
-        {matches.length === 0 ? (
-          <div className="flex flex-col items-center justify-center mt-20 opacity-50">
-             <p className="text-gray-400 text-lg">Sistema en espera de eventos.</p>
-          </div>
-        ) : (
-          Object.keys(groupedByDate).map((dateTitle) => (
-            <section key={dateTitle} className="w-full">
-              <div className="flex items-center gap-3 px-4 md:px-12 lg:px-16 mb-6">
-                <div className="w-1.5 h-6 bg-red-600 rounded-full"></div>
-                <h2 className="text-xl md:text-2xl font-black text-white uppercase tracking-tighter flex items-center gap-2">
-                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                  {dateTitle}
-                </h2>
-              </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 px-4 md:px-12 lg:px-16">
-                {groupedByDate[dateTitle].map((match: any) => (
-                  <Link href={`/partido/${match.slug}`} key={match.id}>
-                    <div className="cursor-pointer aspect-video relative rounded-xl overflow-hidden border border-gray-800 bg-[#0a0a0a] group hover:border-red-600/50 transition-all shadow-lg hover:shadow-red-900/20 hover:-translate-y-1 duration-300">
-                      <img src={match.poster_url} alt="Poster" className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:opacity-40 transition-opacity duration-300" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
-
-                      <div className="absolute top-3 left-3 z-10">
-                        <span className="bg-white/10 backdrop-blur-md border border-white/20 text-white text-[10px] font-bold px-2 py-1 rounded shadow-lg uppercase">{match.competition}</span>
-                      </div>
-
-                      {match.schedules && match.schedules.length > 0 && (
-                        <div className="absolute top-3 right-3 z-10">
-                          <span className="bg-red-600 text-white text-[10px] font-black px-2 py-1 rounded flex items-center gap-1 shadow-lg">
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                            {match.schedules[0].time} {match.schedules[0].region}
-                          </span>
-                        </div>
-                      )}
-
-                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                        <div className="w-12 h-12 rounded-full flex items-center justify-center backdrop-blur-sm border bg-white/10 border-white/20 text-white group-hover:bg-red-600 group-hover:border-red-600 group-hover:scale-110 transition-all duration-300 shadow-xl">
-                            <svg className="w-5 h-5 ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                        </div>
-                      </div>
-
-                      <div className="absolute bottom-0 left-0 w-full p-4 z-10 bg-gradient-to-t from-[#050505] to-transparent">
-                        <h3 className="text-sm md:text-lg font-black leading-tight text-white uppercase italic text-center drop-shadow-md">
-                          {match.home_team} <span className="text-red-500">VS</span> {match.away_team}
-                        </h3>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </section>
-          ))
-        )}
+      <div id="calendario" className="mt-12 space-y-12 px-4 md:px-12 lg:px-16">
+        {Object.keys(groupedByDate).map((date) => (
+          <section key={date}>
+            <h2 className="text-xl md:text-2xl font-black uppercase mb-6 flex items-center gap-2 tracking-tighter">
+              <div className="w-1 h-6 bg-red-600"></div> {date}
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {groupedByDate[date].map((match: any) => (
+                <Link href={`/partido/${match.slug}`} key={match.id} className="group relative aspect-video rounded-xl overflow-hidden border border-white/5 hover:border-red-600/50 transition-all">
+                  <img src={match.poster_url} className="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:scale-105 transition-transform duration-500" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
+                  <div className="absolute bottom-4 left-0 w-full text-center px-2">
+                    <p className="text-sm font-black uppercase italic tracking-tighter">{match.home_team} <span className="text-red-600">vs</span> {match.away_team}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </section>
+        ))}
       </div>
     </main>
   );

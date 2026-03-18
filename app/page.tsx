@@ -1,115 +1,191 @@
-"use client";
-import Link from 'next/link';
-import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { getMatchData } from '@/lib/api-football';
+import Image from 'next/image';
+import Link from 'next/link';
 
-export default function Home() {
-  const [matches, setMatches] = useState<any[]>([]);
-  const [isClient, setIsClient] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+// Revalidación automática cada 60 segundos (ISR)
+export const revalidate = 60;
 
-  useEffect(() => {
-    setIsClient(true);
-    const fetchMatches = async () => {
-      const { data, error } = await supabase
-        .from('matches')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (data && !error) setMatches(data);
-    };
-    fetchMatches();
-  }, []);
+export default async function Home() {
+  // 1. Obtener todos los partidos de Supabase
+  const { data: matches, error } = await supabase
+    .from('matches')
+    .select('*')
+    .order('is_featured', { ascending: false }) // Primero los destacados
+    .order('created_at', { ascending: false });
 
-  if (!isClient) return null;
+  if (error || !matches || matches.length === 0) {
+    return (
+      <div className="min-h-screen bg-[#050505] flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <h1 className="text-4xl font-black italic text-white">STADIO<span className="text-red-600">TV</span></h1>
+          <p className="text-gray-500 uppercase tracking-[0.3em] text-xs">No hay eventos programados</p>
+        </div>
+      </div>
+    );
+  }
 
-  const heroMatch = matches.find(m => m.is_featured) || (matches.length > 0 ? matches[0] : null);
+  // 2. Definir el partido Hero (el primero por orden de importancia)
+  const featured = matches[0];
+  const gridMatches = matches.slice(1);
 
-  const groupedByDate = matches.reduce((acc, match) => {
-    const date = match.schedules?.[0]?.date || 'Próximos Partidos';
-    (acc[date] = acc[date] || []).push(match);
-    return acc;
-  }, {});
+  // 3. Obtener marcador en vivo para el Hero si tiene fixture_id
+  let heroLive = null;
+  if (featured.fixture_id) {
+    heroLive = await getMatchData(String(featured.fixture_id));
+  }
+
+  const heroHomeScore = heroLive?.goals?.home ?? '-';
+  const heroAwayScore = heroLive?.goals?.away ?? '-';
+  const isLive = heroLive?.fixture?.status?.short !== 'NS' && heroLive?.fixture?.status?.short !== 'FT' && heroLive?.fixture?.status?.short !== 'TBD';
 
   return (
-    <main className="min-h-screen bg-[#050505] text-white font-sans overflow-x-hidden selection:bg-red-600 pb-20">
+    <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-red-600">
       
-      <nav className="fixed w-full px-4 md:px-8 py-4 flex justify-between items-center z-50 bg-[#050505]/95 backdrop-blur-md border-b border-white/10 shadow-lg">
-        <Link href="/" className="flex items-center gap-2 group">
-          <div className="w-2 h-6 bg-red-600"></div>
-          <h1 className="text-2xl md:text-3xl font-black tracking-tighter text-red-600">STADIO<span className="text-white">TV</span></h1>
-        </Link>
-        <div className="space-x-6 text-sm text-gray-300 font-medium hidden md:flex">
-          <Link href="/" className="text-white font-bold border-b-2 border-red-600 pb-1">Inicio</Link>
-          <a href="#calendario" className="hover:text-white transition-colors">Cartelera</a>
+      {/* NAVIGATION */}
+      <nav className="fixed top-0 w-full z-[100] bg-black/60 backdrop-blur-xl border-b border-white/5 p-5">
+        <div className="max-w-7xl mx-auto flex justify-between items-center">
+          <Link href="/" className="text-2xl font-black italic tracking-tighter hover:scale-105 transition-transform">
+            STADIO<span className="text-red-600">TV</span>
+          </Link>
+          <div className="flex gap-4 md:gap-8">
+            <Link href="/admin" className="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-red-600 transition-colors">Admin</Link>
+            <span className="text-[10px] font-black uppercase tracking-widest text-red-600 animate-pulse">Live Now</span>
+          </div>
         </div>
-        <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="md:hidden text-white p-2">
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isMobileMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} /></svg>
-        </button>
       </nav>
 
-      {isMobileMenuOpen && (
-        <div className="fixed top-[68px] left-0 w-full bg-[#0a0a0a] border-b border-white/10 z-40 p-4 flex flex-col gap-4 md:hidden shadow-2xl">
-           <Link href="/" onClick={() => setIsMobileMenuOpen(false)} className="text-white font-bold">Inicio</Link>
-           <a href="#calendario" onClick={() => setIsMobileMenuOpen(false)} className="text-gray-400 font-bold">Cartelera</a>
+      {/* HERO SECTION */}
+      <section className="relative w-full h-[85vh] flex items-end overflow-hidden">
+        {/* Background Image con gradientes */}
+        <div className="absolute inset-0 z-0">
+          <Image
+            src={featured.poster_url || "/placeholder.jpg"}
+            alt={featured.home_team}
+            fill
+            className="object-cover opacity-60 scale-105"
+            priority
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/40 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#050505] via-transparent to-transparent opacity-80" />
         </div>
-      )}
 
-      {heroMatch && (
-        <section className="relative pt-20 pb-8 md:pt-0 md:pb-24 min-h-[55vh] md:min-h-[80vh] w-full flex items-end px-4 md:px-12 lg:px-16 border-b border-white/5 mt-16 md:mt-0">
-          <div className="absolute inset-0 z-0">
-            <img src={heroMatch.poster_url} alt="Fondo" className="w-full h-full object-cover opacity-50" />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/80 to-transparent"></div>
-            <div className="absolute inset-0 bg-gradient-to-r from-[#050505] via-[#050505]/60 to-transparent hidden md:block w-3/4"></div>
-          </div>
-          <div className="relative z-10 w-full max-w-4xl">
-            <span className="bg-red-600 text-white text-[10px] font-bold px-3 py-1.5 uppercase tracking-widest shadow-lg flex w-fit items-center gap-2 mb-3">
-              <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></span> DESTACADO
-            </span>
-            <h1 className="text-4xl md:text-8xl font-black mt-2 uppercase leading-none tracking-tighter italic drop-shadow-2xl">
-              {heroMatch.home_team} <br className="hidden md:block"/><span className="text-red-600 mx-0 md:mx-3">VS</span> {heroMatch.away_team}
-            </h1>
-            <p className="hidden md:block text-gray-300 text-lg mt-6 max-w-2xl font-medium text-shadow">{heroMatch.description_short || heroMatch.description}</p>
-            <div className="mt-8">
-              <Link href={`/partido/${heroMatch.slug}`} className="inline-block bg-red-600 text-white font-black px-10 py-4 rounded hover:bg-red-700 transition-all uppercase tracking-tighter shadow-lg active:scale-95">Acceder al Evento</Link>
+        {/* Info del Partido Hero */}
+        <div className="relative z-10 max-w-7xl mx-auto px-6 pb-20 w-full">
+          <div className="flex flex-col space-y-6">
+            <div className="flex items-center gap-3">
+              <span className="bg-red-600 text-[10px] font-black px-3 py-1 rounded shadow-[0_0_15px_rgba(220,38,38,0.4)] uppercase">
+                {featured.competition}
+              </span>
+              {isLive && (
+                <span className="flex items-center gap-2 bg-white/10 backdrop-blur-md text-[10px] font-black px-3 py-1 rounded uppercase">
+                  <span className="w-1.5 h-1.5 bg-red-600 rounded-full animate-pulse" />
+                  En Vivo
+                </span>
+              )}
+            </div>
+
+            <h2 className="text-6xl md:text-8xl lg:text-[120px] font-black uppercase tracking-tighter leading-[0.85] italic">
+              {featured.home_team} <br />
+              <span className="text-red-600 text-4xl md:text-6xl lg:text-8xl not-italic ml-4 mr-4">VS</span>
+              {featured.away_team}
+            </h2>
+
+            <div className="flex flex-col md:flex-row items-start md:items-center gap-6 mt-4">
+              {/* Marcador en vivo integrado en el Home */}
+              {heroLive && (
+                <div className="bg-white/5 backdrop-blur-md border border-white/10 p-4 rounded-2xl flex items-center gap-6">
+                  <div className="text-3xl md:text-5xl font-black tabular-nums">
+                    {heroHomeScore} <span className="text-red-600">:</span> {heroAwayScore}
+                  </div>
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400 border-l border-white/10 pl-6">
+                    Minuto <br/> <span className="text-white text-sm">{heroLive.fixture.status.elapsed}&apos;</span>
+                  </div>
+                </div>
+              )}
+
+              <Link 
+                href={`/partido/${featured.slug}`}
+                className="group relative bg-white text-black px-10 py-5 rounded-2xl font-black uppercase text-sm tracking-tighter overflow-hidden transition-all hover:scale-105 active:scale-95"
+              >
+                <span className="relative z-10">Ver Detalles y Highlights</span>
+                <div className="absolute inset-0 bg-red-600 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+              </Link>
             </div>
           </div>
-        </section>
-      )}
+        </div>
+      </section>
 
-      <div id="calendario" className="mt-12 space-y-12 px-4 md:px-12 lg:px-16">
-        {Object.keys(groupedByDate).length === 0 ? (
-           <p className="text-center text-gray-500 font-bold mt-20">No hay transmisiones activas en el sistema.</p>
-        ) : (
-          Object.keys(groupedByDate).map((date) => (
-            <section key={date}>
-              <h2 className="text-xl md:text-2xl font-black uppercase mb-6 flex items-center gap-3 tracking-tighter">
-                <div className="w-1.5 h-6 bg-red-600"></div> {date}
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-                {groupedByDate[date].map((match: any) => (
-                  <Link href={`/partido/${match.slug}`} key={match.id} className="group relative aspect-video rounded-xl overflow-hidden border border-white/5 hover:border-red-600/50 transition-all shadow-lg">
-                    <img src={match.poster_url} className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:scale-105 group-hover:opacity-40 transition-all duration-500" alt="poster" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
-                    
-                    <div className="absolute top-3 left-3 z-10"><span className="bg-white/10 backdrop-blur-md border border-white/20 text-white text-[10px] font-bold px-2 py-1 rounded uppercase">{match.competition}</span></div>
-                    {match.schedules && match.schedules.length > 0 && (
-                      <div className="absolute top-3 right-3 z-10"><span className="bg-red-600 text-white text-[10px] font-black px-2 py-1 rounded flex items-center gap-1 shadow-lg">⏱ {match.schedules[0].time}</span></div>
-                    )}
-                    
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                        <div className="w-12 h-12 rounded-full flex items-center justify-center backdrop-blur-sm border bg-white/10 border-white/20 text-white group-hover:bg-red-600 group-hover:border-red-600 group-hover:scale-110 transition-all duration-300 shadow-xl"><svg className="w-5 h-5 ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
-                    </div>
-                    
-                    <div className="absolute bottom-4 left-0 w-full text-center px-4">
-                      <p className="text-sm md:text-base font-black uppercase italic tracking-tighter drop-shadow-md">{match.home_team} <span className="text-red-600">vs</span> {match.away_team}</p>
-                    </div>
-                  </Link>
-                ))}
+      {/* GRID DE PARTIDOS SECUNDARIOS */}
+      <main className="max-w-7xl mx-auto px-6 py-24">
+        <div className="flex items-center justify-between mb-12">
+          <h3 className="text-3xl font-black uppercase tracking-tighter flex items-center gap-4">
+            <span className="w-12 h-1.5 bg-red-600" />
+            Cartelera Completa
+          </h3>
+          <p className="text-xs font-bold text-gray-500 uppercase tracking-widest hidden md:block">
+            {matches.length} Eventos Disponibles
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+          {gridMatches.map((match) => (
+            <Link 
+              key={match.id} 
+              href={`/partido/${match.slug}`}
+              className="group relative bg-[#0f0f0f] border border-white/5 rounded-[32px] overflow-hidden hover:border-red-600/30 transition-all duration-500 hover:-translate-y-2 shadow-2xl"
+            >
+              <div className="relative h-64">
+                <Image 
+                  src={match.poster_url || "/placeholder.jpg"} 
+                  alt={match.home_team} 
+                  fill 
+                  className="object-cover opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-all duration-700"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0f0f0f] to-transparent" />
+                <div className="absolute top-5 left-5">
+                  <span className="bg-black/60 backdrop-blur-md text-[9px] font-black px-3 py-1 rounded border border-white/10 uppercase tracking-widest">
+                    {match.competition}
+                  </span>
+                </div>
               </div>
-            </section>
-          ))
-        )}
-      </div>
-    </main>
+
+              <div className="p-8 relative">
+                <div className="flex justify-between items-end">
+                  <div className="space-y-1">
+                    <p className="text-2xl font-black uppercase tracking-tighter leading-none">{match.home_team}</p>
+                    <p className="text-xs font-black text-red-600 italic tracking-widest">VERSUS</p>
+                    <p className="text-2xl font-black uppercase tracking-tighter leading-none">{match.away_team}</p>
+                  </div>
+                  <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center group-hover:bg-red-600 transition-colors duration-300">
+                    <svg className="w-6 h-6 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </main>
+
+      {/* FOOTER */}
+      <footer className="max-w-7xl mx-auto px-6 border-t border-white/5 py-20 flex flex-col md:flex-row justify-between items-center gap-8">
+        <div className="text-xl font-black italic tracking-tighter text-gray-400">
+          STADIO<span className="text-red-600">TV</span>
+        </div>
+        <div className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-600">
+          © 2026 Powered by Fabrizio.sys SmartControl
+        </div>
+        <div className="flex gap-6">
+          <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-red-600 transition-colors cursor-pointer">
+            <span className="text-[10px] font-bold">IG</span>
+          </div>
+          <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-red-600 transition-colors cursor-pointer">
+            <span className="text-[10px] font-bold">X</span>
+          </div>
+        </div>
+      </footer>
+    </div>
   );
 }

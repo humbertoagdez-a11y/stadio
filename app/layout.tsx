@@ -1,36 +1,31 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
+import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
+import Script from 'next/script';
+import './globals.css';
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: "Stadio TV | Fútbol en Vivo HD",
-  description: "La mejor plataforma para ver tus partidos favoritos en vivo y en máxima calidad.",
-  icons: {
-    icon: "/logo.png",
-  },
+  title: 'Stadio TV - Transmisiones Deportivas en Vivo',
+  description: 'Disfruta de los mejores partidos en vivo y en máxima calidad HD.',
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+    <html lang="es">
+      <body className={`${inter.className} bg-[#050505] text-white`}>
         {children}
+        
+        {/* PUBLICIDAD POPUNDER DE ADSTERRA */}
+        <Script 
+          src="https://cardinaltangible.com/2c/d6/75/2cd6751fc31612b0ba021e2af423db05.js" 
+          strategy="afterInteractive" 
+        />
+        
       </body>
     </html>
   );

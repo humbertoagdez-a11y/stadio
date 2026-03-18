@@ -1,27 +1,58 @@
+"use client";
+import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Metadata } from 'next';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 
-// SEO Dinámico para cuando compartas el link
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  const { data: match } = await supabase.from('matches').select('*').eq('slug', params.slug).single();
-  if (!match) return { title: 'Partido No Encontrado - STADIOTV' };
-  return {
-    title: `Ver ${match.home_team} vs ${match.away_team} En Vivo - STADIOTV`,
-    description: match.description_short || `Previa y transmisión HD de ${match.home_team} vs ${match.away_team}.`,
-    openGraph: { images: [match.poster_url || ''] },
-  };
-}
+export default function MatchPage() {
+  const params = useParams();
+  
+  // Extraemos el slug de forma segura
+  const rawSlug = params?.slug;
+  const matchSlug = Array.isArray(rawSlug) ? rawSlug[0] : rawSlug;
 
-export default async function MatchPage({ params }: { params: { slug: string } }) {
-  // BÚSQUEDA CORRECTA POR SLUG
-  const { data: match } = await supabase.from('matches').select('*').eq('slug', params.slug).single();
+  const [match, setMatch] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!matchSlug) return;
+
+    const fetchMatch = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('matches')
+          .select('*')
+          .eq('slug', matchSlug)
+          .single();
+        
+        if (data && !error) {
+          setMatch(data);
+        } else {
+          console.error("No se encontró el partido en la BD.");
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchMatch();
+  }, [matchSlug]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#050505] flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   if (!match) {
     return (
-      <main className="min-h-screen bg-[#050505] flex flex-col items-center justify-center gap-4 text-white">
-        <h2 className="text-3xl font-black uppercase tracking-tighter">Evento No Encontrado</h2>
-        <Link href="/" className="text-red-500 hover:text-red-400 font-bold underline">Volver a inicio</Link>
+      <main className="min-h-screen bg-[#050505] flex flex-col items-center justify-center gap-6 text-white p-4 text-center">
+        <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tighter text-red-600">Evento No Encontrado</h2>
+        <p className="text-gray-400">El partido que buscas no existe o la URL es incorrecta.</p>
+        <Link href="/" className="bg-white text-black font-black px-8 py-4 rounded hover:bg-gray-200 transition-all uppercase shadow-lg">Volver al Inicio</Link>
       </main>
     );
   }
@@ -31,19 +62,18 @@ export default async function MatchPage({ params }: { params: { slug: string } }
   return (
     <main className="min-h-screen bg-[#050505] text-white font-sans selection:bg-red-600 pb-20">
       
-      {/* NAVBAR */}
       <nav className="fixed w-full px-4 md:px-8 py-4 flex justify-between items-center z-50 bg-[#050505]/90 backdrop-blur-md border-b border-white/10 shadow-lg">
         <Link href="/" className="flex items-center gap-2 group">
           <svg className="w-5 h-5 text-gray-400 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
           <div className="w-1.5 h-6 bg-red-600 rounded-full"></div>
           <h1 className="text-xl md:text-2xl font-black tracking-tighter text-red-600">STADIO<span className="text-white">TV</span></h1>
         </Link>
-        <div className="flex items-center gap-2 text-xs text-gray-400 font-medium">
-            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Sistema Online
+        <div className="flex items-center gap-2 text-xs text-gray-400 font-medium bg-white/5 px-3 py-1.5 rounded-full border border-white/5">
+            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> En Vivo HD
         </div>
       </nav>
 
-      {/* HERO SECTION PRO: Altura reducida a 55vh-65vh y degradado suave */}
+      {/* HERO SECTION PRO: Banner ajustado visualmente (55vh a 65vh) */}
       <div className="relative w-full h-[55vh] md:h-[65vh] pt-16">
         <div className="absolute inset-0 z-0">
           <img src={match.poster_url} alt="Poster" className="w-full h-full object-cover opacity-60 md:opacity-40" />
@@ -51,7 +81,7 @@ export default async function MatchPage({ params }: { params: { slug: string } }
           <div className="absolute inset-0 bg-gradient-to-r from-[#050505] via-[#050505]/60 to-transparent hidden md:block w-full"></div>
         </div>
 
-        <div className="absolute bottom-0 left-0 w-full p-6 md:p-16 z-10 max-w-7xl mx-auto flex flex-col gap-4 md:gap-6">
+        <div className="absolute bottom-0 left-0 w-full p-6 md:p-16 z-10 max-w-7xl mx-auto flex flex-col gap-4 md:gap-5">
            <div className="flex flex-wrap items-center gap-2 mb-1">
              <span className="bg-red-600 text-white text-[10px] md:text-xs font-bold px-3 py-1.5 rounded-sm uppercase tracking-widest flex items-center gap-1.5 shadow-lg">
                <div className="w-1.5 h-1.5 bg-white rounded-full"></div> COBERTURA
@@ -72,19 +102,18 @@ export default async function MatchPage({ params }: { params: { slug: string } }
         </div>
       </div>
 
-      {/* CONTENIDO & REPRODUCTORES */}
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-12 flex flex-col lg:flex-row gap-12">
         
-        {/* Lado Principal (Contenido Dinámico) */}
+        {/* Lado Principal */}
         <div className="flex-1 space-y-8 order-2 lg:order-1">
           <div className="bg-[#0a0a0a] border border-white/5 rounded-2xl p-6 md:p-10 shadow-xl relative">
-            <h2 className="text-2xl md:text-3xl font-black mb-8 flex items-center gap-3"><div className="w-1.5 h-8 bg-red-600 rounded-full"></div> Previa Completa del Evento</h2>
+            <h2 className="text-2xl md:text-3xl font-black mb-8 flex items-center gap-3"><div className="w-1.5 h-8 bg-red-600 rounded-full"></div> Análisis del Encuentro</h2>
             <p className="text-gray-300 leading-relaxed text-lg whitespace-pre-line font-medium prose prose-invert max-w-none">
               {match.description_long || match.description}
             </p>
           </div>
 
-          {/* RENDERIZADO DE BLOQUES HTML INFINITOS */}
+          {/* RENDERIZADO HTML (TABLAS, ETC) */}
           {htmlBlocks.length > 0 && htmlBlocks.map((htmlBlock: string, index: number) => (
              <div key={index} className="bg-[#0a0a0a] border border-white/5 rounded-2xl p-6 md:p-10 shadow-xl overflow-x-auto custom-scrollbar relative">
                 <div dangerouslySetInnerHTML={{ __html: htmlBlock }} className="prose prose-invert max-w-none prose-p:text-gray-300 prose-headings:text-white prose-a:text-red-500 font-medium leading-relaxed" />
@@ -92,7 +121,7 @@ export default async function MatchPage({ params }: { params: { slug: string } }
           ))}
         </div>
 
-        {/* Lado Lateral (Monetización) */}
+        {/* Lado Lateral */}
         <div className="w-full lg:w-[400px] space-y-8 order-1 lg:order-2">
           <div className="bg-[#0f0f0f] border border-red-600/30 rounded-2xl p-6 md:p-8 shadow-[0_0_40px_rgba(220,38,38,0.15)] sticky top-28 z-10 relative">
              <h3 className="text-2xl font-black uppercase text-center mb-8 tracking-tighter flex items-center justify-center gap-2.5">
@@ -101,7 +130,7 @@ export default async function MatchPage({ params }: { params: { slug: string } }
              
              <div className="space-y-5">
                 {match.channels && match.channels.length > 0 ? match.channels.map((channel: any, index: number) => (
-                  <Link key={index} href={channel.adLink || match.ad_link || '#'} target="_blank" className="block active:scale-95 transition-transform">
+                  <Link key={index} href={channel.adLink || match.ad_link || '#'} target="_blank" rel="noopener noreferrer" className="block active:scale-95 transition-transform">
                       <button className="w-full justify-center bg-white text-black hover:bg-gray-200 shadow-white/20 font-black px-6 py-5 rounded-xl flex items-center gap-3 shadow-xl group">
                         <svg className="w-7 h-7" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                         <div className="text-left flex flex-col flex-1">
@@ -118,7 +147,7 @@ export default async function MatchPage({ params }: { params: { slug: string } }
                   <p className="text-center text-gray-500 text-sm font-bold p-4 bg-black/40 rounded-xl border border-white/5">Enlaces no disponibles aún.</p>
                 )}
              </div>
-             <p className="text-center text-xs text-gray-500 mt-6 font-medium bg-black/40 p-2 rounded-md">La señal se habilitará momentos antes del inicio.</p>
+             <p className="text-center text-xs text-gray-500 mt-6 font-medium bg-black/40 p-3 rounded-xl border border-white/5">La señal se habilitará momentos antes del pitazo inicial.</p>
           </div>
         </div>
 

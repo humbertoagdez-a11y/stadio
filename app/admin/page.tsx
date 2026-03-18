@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import Link from 'next/link';
 
 export default function AdminPanel() {
   const [matches, setMatches] = useState<any[]>([]);
@@ -21,9 +22,11 @@ export default function AdminPanel() {
     homeTeam: '', awayTeam: '', competition: '', posterUrl: '', description: ''
   });
 
-  const initialSchedule = { time: '', region: '' };
+  // Agregamos la fecha al horario inicial (Por defecto: Hoy)
+  const today = new Date().toISOString().split('T')[0];
+  const initialSchedule = { date: today, time: '', region: '' };
   const initialChannel = { name: 'Opción 1 HD', adLink: '', realLink: '' };
-
+  
   const [currentSchedules, setCurrentSchedules] = useState([{ ...initialSchedule }]);
   const [currentChannels, setCurrentChannels] = useState([{ ...initialChannel }]);
 
@@ -48,7 +51,7 @@ export default function AdminPanel() {
       away_team: formData.awayTeam,
       competition: formData.competition,
       poster_url: formData.posterUrl || 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=1000&auto=format&fit=crop',
-      description: formData.description || `Disfruta del encuentro entre ${formData.homeTeam} y ${formData.awayTeam} en vivo.`,
+      description: formData.description || `Disfruta del encuentro entre ${formData.homeTeam} y ${formData.awayTeam} en vivo por STADIOTV. Todo el análisis, previa y transmisión HD.`,
       schedules: currentSchedules,
       channels: currentChannels,
       ad_link: currentChannels[0]?.adLink || '', 
@@ -60,14 +63,12 @@ export default function AdminPanel() {
     if (!error && data) {
       setMatches([data[0], ...matches]);
       alert("¡Evento publicado con éxito!");
-      // Resetear el formulario
       (e.target as HTMLFormElement).reset();
       setFormData({ homeTeam: '', awayTeam: '', competition: '', posterUrl: '', description: '' });
       setCurrentSchedules([{ ...initialSchedule }]);
       setCurrentChannels([{ ...initialChannel }]);
     } else {
       alert("Error al publicar. Revisa la consola.");
-      console.error(error);
     }
     setIsSubmitting(false);
   };
@@ -75,9 +76,7 @@ export default function AdminPanel() {
   const handleDelete = async (id: number) => {
     if (confirm("¿Estás seguro de eliminar este evento de forma permanente?")) {
       const { error } = await supabase.from('matches').delete().eq('id', id);
-      if (!error) {
-        setMatches(matches.filter(m => m.id !== id));
-      }
+      if (!error) setMatches(matches.filter(m => m.id !== id));
     }
   };
 
@@ -89,38 +88,47 @@ export default function AdminPanel() {
         
         {/* COLUMNA IZQUIERDA: FORMULARIO */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="flex items-center gap-4 border-b border-white/10 pb-6">
-            <h1 className="text-3xl md:text-4xl font-black text-red-600 uppercase italic tracking-tighter">Panel de Control</h1>
-            <span className="bg-green-500/10 text-green-500 border border-green-500/20 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Online
-            </span>
+          <div className="flex items-center justify-between border-b border-white/10 pb-6">
+            <div className="flex items-center gap-4">
+               <h1 className="text-3xl md:text-4xl font-black text-red-600 uppercase italic tracking-tighter">Panel de Control</h1>
+               <span className="bg-green-500/10 text-green-500 border border-green-500/20 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-2">
+                 <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Online
+               </span>
+            </div>
+            <Link href="/" className="text-sm font-bold text-gray-400 hover:text-white underline">Ir a la Web</Link>
           </div>
           
           <form onSubmit={handleSubmit} className="bg-[#0f0f0f] p-6 md:p-8 rounded-2xl border border-white/5 space-y-8 shadow-2xl">
             
             {/* 1. INFO BÁSICA */}
             <div className="space-y-4">
-              <h2 className="text-sm font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2"><span className="text-red-600">1.</span> Datos del Evento</h2>
+              <h2 className="text-sm font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2"><span className="text-red-600">1.</span> Datos del Evento (SEO)</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <input required placeholder="Equipo Local" className="w-full bg-black border border-white/10 p-4 rounded-xl focus:border-red-600 outline-none transition-colors" onChange={e => setFormData({...formData, homeTeam: e.target.value})} />
                 <input required placeholder="Equipo Visitante" className="w-full bg-black border border-white/10 p-4 rounded-xl focus:border-red-600 outline-none transition-colors" onChange={e => setFormData({...formData, awayTeam: e.target.value})} />
               </div>
               <input required placeholder="Competición (Ej: Champions League)" className="w-full bg-black border border-white/10 p-4 rounded-xl focus:border-red-600 outline-none transition-colors" onChange={e => setFormData({...formData, competition: e.target.value})} />
-              <textarea required placeholder="Escribe una descripción atractiva para el banner principal..." className="w-full bg-black border border-white/10 p-4 rounded-xl h-28 focus:border-red-600 outline-none resize-none transition-colors" onChange={e => setFormData({...formData, description: e.target.value})} />
+              
+              <div className="space-y-1">
+                 <label className="text-xs text-gray-500 font-bold ml-2">Descripción Larga (Aparecerá en la página del partido para SEO)</label>
+                 <textarea required placeholder="Escribe la previa completa, alineaciones posibles, cómo llegan los equipos..." className="w-full bg-black border border-white/10 p-4 rounded-xl h-32 focus:border-red-600 outline-none resize-none transition-colors" onChange={e => setFormData({...formData, description: e.target.value})} />
+              </div>
+              
               <input placeholder="URL del Poster (Opcional - Imagen HD horizontal)" className="w-full bg-black border border-white/10 p-4 rounded-xl focus:border-red-600 outline-none transition-colors text-sm" onChange={e => setFormData({...formData, posterUrl: e.target.value})} />
             </div>
 
-            {/* 2. HORARIOS */}
+            {/* 2. HORARIOS Y FECHA */}
             <div className="space-y-4 bg-black/40 p-5 rounded-2xl border border-white/5">
               <div className="flex justify-between items-center">
-                <h2 className="text-sm font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2"><span className="text-red-600">2.</span> Horarios</h2>
+                <h2 className="text-sm font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2"><span className="text-red-600">2.</span> Calendario y Horarios</h2>
                 <button type="button" onClick={() => setCurrentSchedules([...currentSchedules, { ...initialSchedule }])} className="bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">+ Añadir País</button>
               </div>
               <div className="space-y-3">
                 {currentSchedules.map((sched, i) => (
-                  <div key={i} className="flex gap-3 items-center">
-                    <input required type="time" value={sched.time} className="bg-black border border-white/10 p-3 rounded-lg text-sm outline-none focus:border-red-600 transition-colors [color-scheme:dark]" onChange={e => updateSchedule(i, 'time', e.target.value)} />
-                    <input required placeholder="País (Ej: 🇦🇷 AR)" value={sched.region} className="flex-1 bg-black border border-white/10 p-3 rounded-lg text-sm outline-none focus:border-red-600 transition-colors" onChange={e => updateSchedule(i, 'region', e.target.value)} />
+                  <div key={i} className="flex flex-wrap md:flex-nowrap gap-3 items-center bg-black p-2 rounded-xl border border-white/5">
+                    <input required type="date" value={sched.date} className="bg-transparent text-gray-300 p-2 rounded-lg text-sm outline-none focus:text-white transition-colors [color-scheme:dark]" onChange={e => updateSchedule(i, 'date', e.target.value)} />
+                    <input required type="time" value={sched.time} className="bg-[#111] border border-white/10 p-3 rounded-lg text-sm outline-none focus:border-red-600 transition-colors [color-scheme:dark]" onChange={e => updateSchedule(i, 'time', e.target.value)} />
+                    <input required placeholder="País (Ej: 🇦🇷 AR)" value={sched.region} className="flex-1 bg-[#111] border border-white/10 p-3 rounded-lg text-sm outline-none focus:border-red-600 transition-colors" onChange={e => updateSchedule(i, 'region', e.target.value)} />
                     {currentSchedules.length > 1 && <button type="button" onClick={() => setCurrentSchedules(currentSchedules.filter((_, idx) => idx !== i))} className="p-3 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors">✕</button>}
                   </div>
                 ))}
@@ -130,7 +138,7 @@ export default function AdminPanel() {
             {/* 3. CANALES */}
             <div className="space-y-4 bg-black/40 p-5 rounded-2xl border border-white/5">
               <div className="flex justify-between items-center">
-                <h2 className="text-sm font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2"><span className="text-red-600">3.</span> Canales de Streaming</h2>
+                <h2 className="text-sm font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2"><span className="text-red-600">3.</span> Canales y Monetización</h2>
                 <button type="button" onClick={() => setCurrentChannels([...currentChannels, { name: `Opción ${currentChannels.length + 1} HD`, adLink: '', realLink: '' }])} className="bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">+ Añadir Canal</button>
               </div>
               <div className="space-y-4">
@@ -156,7 +164,7 @@ export default function AdminPanel() {
             </div>
 
             <button type="submit" disabled={isSubmitting} className="w-full bg-red-600 hover:bg-red-700 disabled:bg-red-800 disabled:cursor-not-allowed py-5 rounded-2xl font-black text-xl transition-all shadow-[0_0_20px_rgba(220,38,38,0.2)] hover:shadow-[0_0_30px_rgba(220,38,38,0.4)] active:scale-[0.98]">
-              {isSubmitting ? 'PUBLICANDO...' : 'PUBLICAR EN STADIO TV'}
+              {isSubmitting ? 'PUBLICANDO...' : 'PUBLICAR EN STADIOTV'}
             </button>
           </form>
         </div>
@@ -174,6 +182,10 @@ export default function AdminPanel() {
                     <div className="space-y-1">
                       <p className="text-[10px] text-red-500 uppercase font-black tracking-widest">{m.competition}</p>
                       <p className="text-lg font-black leading-tight italic">{m.home_team} <br/> <span className="text-gray-500 text-sm">vs</span> {m.away_team}</p>
+                      {/* Mostramos la fecha guardada */}
+                      {m.schedules?.[0]?.date && (
+                         <p className="text-xs text-gray-500 mt-1">📅 {m.schedules[0].date}</p>
+                      )}
                     </div>
                     <button onClick={() => handleDelete(m.id)} className="bg-red-500/10 text-red-500 w-8 h-8 rounded-full flex items-center justify-center hover:bg-red-600 hover:text-white transition-all opacity-0 group-hover:opacity-100">✕</button>
                   </div>

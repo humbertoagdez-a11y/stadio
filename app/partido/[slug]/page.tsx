@@ -4,12 +4,11 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
-// IMPORTACIÓN DEFINITIVA (Ruta relativa desde app/partido/[slug]/page.tsx)
+// Ruta relativa probada
 import VideoPlayer from '../../../components/VideoPlayer';
 
-export const revalidate = 60; // Se actualiza cada minuto para el marcador en vivo
+export const revalidate = 60;
 
-// ESTRUCTURA DE DATOS (TypeScript para evitar errores)
 interface Match {
   id: number;
   home_team: string;
@@ -28,11 +27,9 @@ interface PageProps {
 }
 
 export default async function MatchPage(props: PageProps) {
-  // 1. Resolvemos el slug de la URL
   const params = await props.params;
   const { slug } = params;
 
-  // 2. Traemos el partido de Supabase
   const { data, error } = await supabase
     .from('matches')
     .select('*')
@@ -42,7 +39,6 @@ export default async function MatchPage(props: PageProps) {
   if (error || !data) return notFound();
   const match = data as Match;
 
-  // 3. Traemos datos en tiempo real de API-Football
   let liveStats = null;
   if (match.fixture_id) {
     try {
@@ -55,7 +51,7 @@ export default async function MatchPage(props: PageProps) {
   return (
     <div className="min-h-screen bg-[#050505] text-white selection:bg-red-600 pb-20 font-sans">
       
-      {/* HEADER FLOTANTE */}
+      {/* HEADER */}
       <header className="fixed top-0 w-full z-50 bg-[#050505]/80 backdrop-blur-xl border-b border-white/5 p-4">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <Link href="/" className="text-2xl font-black italic tracking-tighter hover:opacity-80 transition-opacity">
@@ -67,7 +63,7 @@ export default async function MatchPage(props: PageProps) {
         </div>
       </header>
 
-      {/* SECCIÓN 1: BANNER PRINCIPAL (Póster Dinámico) */}
+      {/* BANNER PRINCIPAL */}
       <div className="relative h-[60vh] md:h-[75vh] w-full">
         <Image 
           src={match.poster_url || "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=2070&auto=format&fit=crop"} 
@@ -87,12 +83,11 @@ export default async function MatchPage(props: PageProps) {
         </div>
       </div>
 
-      {/* CONTENIDO PRINCIPAL */}
       <main className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-3 gap-12 mt-12 relative z-20">
         
         <div className="lg:col-span-2 space-y-12">
           
-          {/* MARCADOR EN VIVO (MÓDULO API) */}
+          {/* MARCADOR EN VIVO */}
           {liveStats && (
             <div className="bg-[#0f0f0f] border border-white/5 p-10 rounded-[40px] flex items-center justify-between shadow-2xl relative overflow-hidden group">
               <div className="absolute top-0 left-1/2 -translate-x-1/2 w-80 h-40 bg-red-600/10 blur-[120px]" />
@@ -115,7 +110,7 @@ export default async function MatchPage(props: PageProps) {
             </div>
           )}
 
-          {/* EVENTOS (GOLES Y TARJETAS) */}
+          {/* EVENTOS (Goles y Tarjetas) */}
           {liveStats?.events && liveStats.events.length > 0 && (
             <div className="bg-[#0a0a0a] border border-white/5 rounded-[32px] p-8 space-y-6">
               <h4 className="text-[10px] font-black uppercase text-gray-500 tracking-[0.3em] border-b border-white/5 pb-4">
@@ -136,7 +131,7 @@ export default async function MatchPage(props: PageProps) {
             </div>
           )}
 
-          {/* REPRODUCTOR DE VIDEOS (HIGHLIGHTS) */}
+          {/* REPRODUCTOR */}
           <section className="space-y-8">
             <h3 className="text-3xl font-black uppercase italic tracking-tighter flex items-center gap-4">
               <span className="w-12 h-1.5 bg-purple-600 rounded-full" /> RESUMEN DEL PARTIDO
@@ -144,7 +139,7 @@ export default async function MatchPage(props: PageProps) {
             <VideoPlayer highlights={match.highlights || []} />
           </section>
 
-          {/* CRÓNICA / ANÁLISIS */}
+          {/* CRÓNICA */}
           <section className="space-y-6">
              <h3 className="text-3xl font-black uppercase italic tracking-tighter flex items-center gap-4">
               <span className="w-12 h-1.5 bg-gray-700 rounded-full" /> CRÓNICA
@@ -157,7 +152,7 @@ export default async function MatchPage(props: PageProps) {
           </section>
         </div>
 
-        {/* COLUMNA LATERAL (HORARIOS) */}
+        {/* HORARIOS */}
         <aside className="space-y-8">
           <div className="bg-[#0f0f0f] border border-white/5 p-8 rounded-[40px] sticky top-28 shadow-2xl">
             <h4 className="font-black uppercase text-[11px] text-gray-500 mb-8 tracking-[0.4em] border-b border-white/5 pb-5 text-center">
@@ -172,7 +167,6 @@ export default async function MatchPage(props: PageProps) {
               ))}
             </div>
             
-            {/* BOTÓN DE INSTALAR APP (PROXIMAMENTE PWA) */}
             <button className="w-full mt-10 bg-white text-black py-5 rounded-[24px] font-black text-xs uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all shadow-xl shadow-white/5 active:scale-95">
               INSTALAR STADIO APP
             </button>

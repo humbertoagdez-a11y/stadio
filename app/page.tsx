@@ -24,7 +24,6 @@ export default function Home() {
 
   const heroMatch = matches.length > 0 ? matches[0] : null;
 
-  // Agrupamos los partidos por fecha (usando la fecha guardada o 'Hoy' por defecto)
   const groupedByDate = matches.reduce((acc, match) => {
     const date = match.schedules?.[0]?.date || 'Próximos Partidos';
     (acc[date] = acc[date] || []).push(match);
@@ -65,14 +64,15 @@ export default function Home() {
         </div>
       )}
 
-      {/* HERO SECTION PRO */}
+      {/* HERO SECTION PRO - Ajuste del corte agresivo: quitamos border-bottom y suavizamos gradientes */}
       {heroMatch && (
-        <section className="relative pt-20 pb-8 md:pt-0 md:pb-24 min-h-[50vh] md:min-h-[85vh] w-full flex items-end px-4 md:px-12 lg:px-16 mt-12 md:mt-0 border-b border-gray-900">
+        <section className="relative pt-20 pb-12 md:pt-0 md:pb-32 min-h-[50vh] md:min-h-[85vh] w-full flex items-end px-4 md:px-12 lg:px-16 mt-12 md:mt-0">
           <div className="absolute inset-0 z-0">
-            <img src={heroMatch.poster_url} alt="Fondo" className="w-full h-full object-cover opacity-60 md:opacity-50" />
-            {/* Degradados ajustados para legibilidad extrema en PC y Móvil */}
-            <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/90 md:via-[#050505]/60 to-transparent"></div>
-            <div className="absolute inset-0 bg-gradient-to-r from-[#050505] via-[#050505]/90 to-transparent hidden md:block w-3/4"></div>
+            <img src={heroMatch.poster_url} alt="Fondo" className="w-full h-full object-cover opacity-60 md:opacity-40" />
+            {/* Degradado inferior extenso para borrar el corte y fundirse con el fondo */}
+            <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/80 to-transparent"></div>
+            {/* Degradado lateral */}
+            <div className="absolute inset-0 bg-gradient-to-r from-[#050505] via-[#050505]/80 to-transparent hidden md:block w-full"></div>
           </div>
 
           <div className="relative z-10 w-full max-w-4xl">
@@ -104,7 +104,7 @@ export default function Home() {
       )}
 
       {/* CARTELERA TIPO CALENDARIO */}
-      <div id="calendario" className="mt-12 md:mt-16 space-y-12">
+      <div id="calendario" className="mt-4 md:mt-8 space-y-12 relative z-10">
         {matches.length === 0 ? (
           <div className="flex flex-col items-center justify-center mt-20 opacity-50">
              <p className="text-gray-400 text-lg">Aún no hay transmisiones activas.</p>

@@ -37,9 +37,8 @@ export default function MatchPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#050505] text-white font-sans selection:bg-red-600">
+    <main className="min-h-screen bg-[#050505] text-white font-sans selection:bg-red-600 pb-20">
       
-      {/* NAVBAR */}
       <nav className="w-full px-4 md:px-8 py-4 flex justify-between items-center bg-[#050505] border-b border-white/10 z-50 relative">
         <Link href="/" className="flex items-center gap-2 group">
           <svg className="w-6 h-6 text-gray-400 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
@@ -48,7 +47,6 @@ export default function MatchPage() {
         </Link>
       </nav>
 
-      {/* HEADER */}
       <div className="relative w-full h-[60vh] md:h-[75vh]">
         <div className="absolute inset-0 z-0">
           <img src={match.poster_url} alt="Poster" className="w-full h-full object-cover opacity-60 md:opacity-40" />
@@ -70,10 +68,9 @@ export default function MatchPage() {
         </div>
       </div>
 
-      {/* CONTENIDO */}
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-12 flex flex-col lg:flex-row gap-12">
         
-        {/* Lado Principal */}
+        {/* Lado Principal (Contenido) */}
         <div className="flex-1 space-y-8 order-2 lg:order-1">
           
           <div className="bg-[#0a0a0a] border border-white/5 rounded-2xl p-6 md:p-10 shadow-xl">
@@ -83,38 +80,17 @@ export default function MatchPage() {
             </p>
           </div>
 
-          {(match.lineups_home || match.lineups_away) && (
-            <div className="bg-[#0a0a0a] border border-white/5 rounded-2xl p-6 md:p-8">
-               <h3 className="text-xl md:text-2xl font-black mb-6 uppercase tracking-tight">Alineaciones Probables</h3>
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                   {match.lineups_home && (
-                      <div className="space-y-3">
-                         <h4 className="font-bold text-red-500 uppercase flex items-center gap-2"><div className="w-1 h-1 bg-white rounded-full"></div> {match.home_team}</h4>
-                         <p className="text-gray-400 text-sm whitespace-pre-line font-mono">{match.lineups_home}</p>
-                      </div>
-                   )}
-                   {match.lineups_away && (
-                      <div className="space-y-3">
-                         <h4 className="font-bold text-red-500 uppercase flex items-center gap-2"><div className="w-1 h-1 bg-white rounded-full"></div> {match.away_team}</h4>
-                         <p className="text-gray-400 text-sm whitespace-pre-line font-mono">{match.lineups_away}</p>
-                      </div>
-                   )}
-               </div>
-            </div>
-          )}
-
-          {/* EL BLOQUE COMODÍN (Se muestra solo si pegaste algo en el Admin) */}
-          {match.custom_embed && (
-            <div className="bg-[#0a0a0a] border border-white/5 rounded-2xl p-6 md:p-8 shadow-xl overflow-hidden">
-               <div dangerouslySetInnerHTML={{ __html: match.custom_embed }} />
-            </div>
-          )}
+          {/* RENDERIZADO DE BLOQUES HTML INFINITOS */}
+          {match.custom_blocks && match.custom_blocks.length > 0 && match.custom_blocks.map((htmlBlock: string, index: number) => (
+             <div key={index} className="bg-[#0a0a0a] border border-white/5 rounded-2xl p-6 md:p-10 shadow-xl overflow-x-auto custom-scrollbar">
+                <div dangerouslySetInnerHTML={{ __html: htmlBlock }} className="prose prose-invert max-w-none prose-p:text-gray-300 prose-headings:text-white prose-a:text-red-500" />
+             </div>
+          ))}
 
         </div>
 
         {/* Lado Lateral (Transmisión) */}
         <div className="w-full lg:w-[400px] space-y-8 order-1 lg:order-2">
-          
           <div className="bg-[#0f0f0f] border border-red-600/30 rounded-2xl p-6 md:p-8 shadow-[0_0_40px_rgba(220,38,38,0.15)] sticky top-24 z-10">
              <h3 className="text-2xl font-black uppercase text-center mb-6 tracking-tighter flex items-center justify-center gap-2">
                <span className="w-3 h-3 bg-red-600 rounded-full animate-pulse"></span> Transmisión HD
@@ -139,18 +115,6 @@ export default function MatchPage() {
              </div>
              <p className="text-center text-xs text-gray-500 mt-6 font-medium">La señal se habilitará momentos antes del inicio.</p>
           </div>
-
-          {match.stats && (
-            <div className="bg-[#0a0a0a] border border-white/5 rounded-2xl p-6 md:p-8">
-               <h3 className="text-xl font-black uppercase mb-5 tracking-tight flex items-center gap-2">
-                 <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
-                 Datos Clave
-               </h3>
-               <p className="text-gray-300 leading-relaxed text-sm whitespace-pre-line font-medium font-mono">
-                 {match.stats}
-               </p>
-            </div>
-          )}
         </div>
 
       </div>

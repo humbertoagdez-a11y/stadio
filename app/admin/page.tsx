@@ -20,11 +20,11 @@ export default function AdminPanel() {
   }, []);
 
   const [formData, setFormData] = useState({
-    homeTeam: '', awayTeam: '', competition: '', posterUrl: '', descriptionShort: '', descriptionLong: '', slug: '', stats: '', lineupsHome: '', lineupsAway: '', customEmbed: '', isFeatured: false
+    homeTeam: '', awayTeam: '', competition: '', posterUrl: '', descriptionShort: '', descriptionLong: '', slug: '', isFeatured: false
   });
 
   const generateSlug = (home: string, away: string) => {
-    return `${home}-${away}`.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '');
+    return `${home}-${away}`.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '') + '-' + Math.floor(Math.random() * 1000);
   };
 
   const today = new Date().toISOString().split('T')[0];
@@ -33,6 +33,9 @@ export default function AdminPanel() {
   
   const [currentSchedules, setCurrentSchedules] = useState([{ ...initialSchedule }]);
   const [currentChannels, setCurrentChannels] = useState([{ ...initialChannel }]);
+  
+  // Nuevo Estado: Lista de Bloques HTML Customizados
+  const [customBlocks, setCustomBlocks] = useState<string[]>([]);
 
   const updateSchedule = (index: number, field: string, value: string) => {
     const newS = [...currentSchedules];
@@ -46,6 +49,12 @@ export default function AdminPanel() {
     setCurrentChannels(newC);
   };
 
+  const updateCustomBlock = (index: number, value: string) => {
+    const newB = [...customBlocks];
+    newB[index] = value;
+    setCustomBlocks(newB);
+  };
+
   const handleEditClick = (match: any) => {
     setEditingId(match.id);
     setFormData({
@@ -56,22 +65,20 @@ export default function AdminPanel() {
       descriptionShort: match.description_short || '',
       descriptionLong: match.description_long || match.description || '',
       slug: match.slug,
-      stats: match.stats || '',
-      lineupsHome: match.lineups_home || '',
-      lineupsAway: match.lineups_away || '',
-      customEmbed: match.custom_embed || '',
       isFeatured: match.is_featured || false
     });
     setCurrentSchedules(match.schedules && match.schedules.length > 0 ? match.schedules : [{ ...initialSchedule }]);
     setCurrentChannels(match.channels && match.channels.length > 0 ? match.channels : [{ ...initialChannel }]);
+    setCustomBlocks(match.custom_blocks || []);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const cancelEdit = () => {
     setEditingId(null);
-    setFormData({ homeTeam: '', awayTeam: '', competition: '', posterUrl: '', descriptionShort: '', descriptionLong: '', slug: '', stats: '', lineupsHome: '', lineupsAway: '', customEmbed: '', isFeatured: false });
+    setFormData({ homeTeam: '', awayTeam: '', competition: '', posterUrl: '', descriptionShort: '', descriptionLong: '', slug: '', isFeatured: false });
     setCurrentSchedules([{ ...initialSchedule }]);
     setCurrentChannels([{ ...initialChannel }]);
+    setCustomBlocks([]);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -92,11 +99,8 @@ export default function AdminPanel() {
       ad_link: currentChannels[0]?.adLink || '', 
       real_link: currentChannels[0]?.realLink || '',
       slug: slug,
-      stats: formData.stats,
-      lineups_home: formData.lineupsHome,
-      lineups_away: formData.lineupsAway,
-      custom_embed: formData.customEmbed,
-      is_featured: formData.isFeatured
+      is_featured: formData.isFeatured,
+      custom_blocks: customBlocks.filter(block => block.trim() !== '') // Solo guarda los que no estén vacíos
     };
 
     if (editingId) {
@@ -105,14 +109,14 @@ export default function AdminPanel() {
         setMatches(matches.map(m => m.id === editingId ? data[0] : m));
         alert("¡Sistema actualizado!");
         cancelEdit();
-      } else alert("Error. Verifica que la URL SEO sea única.");
+      } else alert("Error. Modifica la URL SEO (Slug) para que sea única.");
     } else {
       const { data, error } = await supabase.from('matches').insert([matchData]).select();
       if (!error && data) {
         setMatches([data[0], ...matches]);
         alert("¡Evento publicado!");
         cancelEdit();
-      } else alert("Error. Verifica que la URL SEO sea única.");
+      } else alert("Error. Modifica la URL SEO (Slug) para que sea única.");
     }
     setIsSubmitting(false);
   };
@@ -153,13 +157,11 @@ export default function AdminPanel() {
               </div>
             )}
 
-            {/* SECCIÓN DESTACADO */}
             <div className="bg-red-600/10 border border-red-600/30 p-4 rounded-xl flex items-center gap-4">
               <input type="checkbox" id="featured" checked={formData.isFeatured} onChange={e => setFormData({...formData, isFeatured: e.target.checked})} className="w-6 h-6 accent-red-600 cursor-pointer" />
               <label htmlFor="featured" className="cursor-pointer font-bold text-red-500 uppercase tracking-wide">Marcar como Partido Destacado (Banner Principal)</label>
             </div>
 
-            {/* 1. INFO BÁSICA & SEO */}
             <div className="space-y-4">
               <h2 className="text-sm font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2"><span className={editingId ? 'text-blue-500' : 'text-red-600'}>1.</span> Identificación & SEO</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -171,25 +173,30 @@ export default function AdminPanel() {
               <input value={formData.posterUrl} placeholder="URL del Poster (Imagen HD)" className="w-full bg-black border border-white/10 p-4 rounded-xl focus:border-red-600 outline-none transition-colors text-sm" onChange={e => setFormData({...formData, posterUrl: e.target.value})} />
             </div>
 
-            {/* 2. VALOR AÑADIDO (CONTENIDO) */}
             <div className="space-y-4 bg-black/40 p-5 rounded-2xl border border-white/5">
-              <h2 className="text-sm font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2"><span className={editingId ? 'text-blue-500' : 'text-red-600'}>2.</span> Contenido</h2>
+              <h2 className="text-sm font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2"><span className={editingId ? 'text-blue-500' : 'text-red-600'}>2.</span> Contenido Principal</h2>
               <input value={formData.descriptionShort} placeholder="Descripción Corta (Banner Inicio)" className="w-full bg-black border border-white/10 p-4 rounded-xl focus:border-red-600 outline-none transition-colors text-sm" onChange={e => setFormData({...formData, descriptionShort: e.target.value})} />
               <textarea required value={formData.descriptionLong} placeholder="Previa Detallada..." className="w-full bg-black border border-white/10 p-4 rounded-xl h-40 focus:border-red-600 outline-none resize-none transition-colors leading-relaxed" onChange={e => setFormData({...formData, descriptionLong: e.target.value})} />
             </div>
 
-            {/* 3. BLOQUES EXTRA (ESTADÍSTICAS & COMODÍN) */}
+            {/* SECCIÓN BLOQUES HTML (INFINTOS) */}
             <div className="space-y-4 bg-black/40 p-5 rounded-2xl border border-white/5">
-              <h2 className="text-sm font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2"><span className={editingId ? 'text-blue-500' : 'text-red-600'}>3.</span> Bloques Adicionales</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <textarea value={formData.stats} placeholder="Estadísticas Clave (Texto)" className="w-full bg-black border border-white/10 p-4 rounded-xl h-24 focus:border-red-600 outline-none resize-none transition-colors text-xs font-mono" onChange={e => setFormData({...formData, stats: e.target.value})} />
-                 <textarea value={formData.lineupsHome} placeholder="Alineación Local" className="w-full bg-black border border-white/10 p-4 rounded-xl h-24 focus:border-red-600 outline-none resize-none transition-colors text-xs font-mono" onChange={e => setFormData({...formData, lineupsHome: e.target.value})} />
-                 <textarea value={formData.lineupsAway} placeholder="Alineación Visitante" className="w-full bg-black border border-white/10 p-4 rounded-xl h-24 focus:border-red-600 outline-none resize-none transition-colors text-xs font-mono" onChange={e => setFormData({...formData, lineupsAway: e.target.value})} />
-                 <textarea value={formData.customEmbed} placeholder="Comodín HTML (Pega iframes, tweets, o más texto aquí)" className="w-full bg-black border border-yellow-500/30 p-4 rounded-xl h-24 focus:border-yellow-500 outline-none resize-none transition-colors text-xs font-mono text-yellow-500/80" onChange={e => setFormData({...formData, customEmbed: e.target.value})} />
+              <div className="flex justify-between items-center">
+                <h2 className="text-sm font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2"><span className={editingId ? 'text-blue-500' : 'text-red-600'}>3.</span> Bloques HTML Extra</h2>
+                <button type="button" onClick={() => setCustomBlocks([...customBlocks, ''])} className="bg-yellow-500/20 text-yellow-500 hover:bg-yellow-500/30 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">Añadir Bloque HTML</button>
+              </div>
+              <p className="text-xs text-gray-500">Pega iframes, tablas, tweets o cualquier código HTML. Cada bloque aparecerá como una sección nueva en la página del partido.</p>
+              
+              <div className="space-y-4">
+                {customBlocks.map((block, i) => (
+                   <div key={i} className="relative">
+                      <textarea value={block} placeholder="<h1>Título</h1><p>Contenido...</p>" className="w-full bg-black border border-yellow-500/30 p-4 rounded-xl h-24 focus:border-yellow-500 outline-none resize-y transition-colors text-xs font-mono text-yellow-500/80" onChange={e => updateCustomBlock(i, e.target.value)} />
+                      <button type="button" onClick={() => setCustomBlocks(customBlocks.filter((_, idx) => idx !== i))} className="absolute top-2 right-2 bg-red-500/20 text-red-500 p-1.5 rounded hover:bg-red-500/40 transition-colors">✕</button>
+                   </div>
+                ))}
               </div>
             </div>
 
-            {/* 4. HORARIOS */}
             <div className="space-y-4 bg-black/40 p-5 rounded-2xl border border-white/5">
               <div className="flex justify-between items-center">
                 <h2 className="text-sm font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2"><span className={editingId ? 'text-blue-500' : 'text-red-600'}>4.</span> Calendario</h2>
@@ -207,7 +214,6 @@ export default function AdminPanel() {
               </div>
             </div>
 
-            {/* 5. CANALES */}
             <div className="space-y-4 bg-black/40 p-5 rounded-2xl border border-white/5">
               <div className="flex justify-between items-center">
                 <h2 className="text-sm font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2"><span className={editingId ? 'text-blue-500' : 'text-red-600'}>5.</span> Enlaces</h2>
@@ -241,7 +247,6 @@ export default function AdminPanel() {
           </form>
         </div>
 
-        {/* COLUMNA DERECHA: LISTADO */}
         <div className="space-y-6">
           <h2 className="text-xl font-black uppercase text-gray-400 tracking-tighter border-b border-white/10 pb-6">Registros ({matches.length})</h2>
           <div className="space-y-4 max-h-[80vh] overflow-y-auto pr-2 custom-scrollbar">

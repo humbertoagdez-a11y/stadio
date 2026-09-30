@@ -1,0 +1,19 @@
+# Uso:  docker compose up -d --build
+# Nginx (en el host) hace de proxy HTTPS hacia 127.0.0.1:3000
+services:
+  game:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      HOST: 0.0.0.0
+      DB_PATH: /app/data/game.sqlite
+    ports:
+      - "127.0.0.1:3000:3000"   # sólo accesible desde el propio VPS (Nginx)
+    volumes:
+      - ./data:/app/data
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

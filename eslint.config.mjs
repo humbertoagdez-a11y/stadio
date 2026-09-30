@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Juego de Telegram: proyecto Node independiente
+    "runner-tma/**",
   ]),
 ]);
 

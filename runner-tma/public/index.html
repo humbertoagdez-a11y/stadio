@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b0f1f" />
+  <title>Heist Run</title>
+  <!-- SDK oficial de Telegram Mini Apps: debe cargarse ANTES que el resto -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <!-- ================= HUD durante la partida ================= -->
+  <div id="hud" class="hidden">
+    <div class="hud-top">
+      <div class="hud-score"><span id="hud-score">0</span><small>m</small></div>
+      <div class="hud-right">
+        <div class="hud-coins"><span class="coin-ico"></span><span id="hud-coins">0</span><span id="hud-mult" class="badge hidden">x2</span></div>
+        <button id="btn-pause" class="icon-btn" aria-label="Pausa">❚❚</button>
+      </div>
+    </div>
+    <div id="hud-powerups"></div>
+  </div>
+
+  <!-- ================= Carga ================= -->
+  <section id="screen-loading" class="screen center">
+    <div class="logo">HEIST<span>RUN</span></div>
+    <div class="spinner"></div>
+  </section>
+
+  <!-- ================= Fuera de Telegram ================= -->
+  <section id="screen-blocked" class="screen center hidden">
+    <div class="logo">HEIST<span>RUN</span></div>
+    <p class="muted">Este juego funciona dentro de Telegram.<br />Abrilo desde el bot.</p>
+  </section>
+
+  <!-- ================= Menú principal ================= -->
+  <section id="screen-menu" class="screen hidden">
+    <header class="topbar">
+      <div class="pill"><span class="coin-ico"></span><b id="menu-coins">0</b></div>
+      <div class="pill">🏆 <b id="menu-best">0</b></div>
+      <button id="btn-mute" class="icon-btn" aria-label="Sonido">🔊</button>
+    </header>
+
+    <div class="menu-center">
+      <div class="logo big">HEIST<span>RUN</span></div>
+      <p class="tagline">¡Escapá de la policía con el botín!</p>
+    </div>
+
+    <div class="menu-bottom">
+      <!-- Multiplier Ad: ANTES de iniciar la partida -->
+      <button id="btn-mult" class="card-btn ad">
+        <span class="ad-ico">▶</span>
+        <span class="txt"><b>Monedas x2 en esta partida</b><small>Mirá un anuncio corto</small></span>
+      </button>
+      <div id="mult-active" class="card-btn active hidden">
+        <span class="ad-ico">✓</span>
+        <span class="txt"><b>x2 ACTIVADO</b><small>Se aplica en tu próxima partida</small></span>
+      </div>
+
+      <div id="boosts" class="boosts"></div>
+
+      <button id="btn-play" class="btn primary huge">JUGAR</button>
+      <div class="row">
+        <button id="btn-shop" class="btn">🛒 Tienda</button>
+        <button id="btn-ranking" class="btn">🏆 Ranking</button>
+      </div>
+      <p class="hint">Deslizá ← → para cambiar de carril · ↑ saltar · ↓ rodar</p>
+    </div>
+  </section>
+
+  <!-- ================= Tienda ================= -->
+  <section id="screen-shop" class="screen panel hidden">
+    <header class="topbar">
+      <button class="icon-btn back" data-back>←</button>
+      <h2>Tienda</h2>
+      <div class="pill"><span class="coin-ico"></span><b id="shop-coins">0</b></div>
+    </header>
+    <nav class="tabs">
+      <button class="tab active" data-tab="skins">Personajes</button>
+      <button class="tab" data-tab="upgrades">Mejoras</button>
+      <button class="tab" data-tab="consumables">Boosts</button>
+    </nav>
+    <div id="shop-list" class="list"></div>
+    <button id="shop-earn" class="card-btn ad slim">
+      <span class="ad-ico">▶</span>
+      <span class="txt"><b>¿Te faltan monedas?</b><small>Activá x2 para tu próxima partida</small></span>
+    </button>
+  </section>
+
+  <!-- ================= Ranking ================= -->
+  <section id="screen-ranking" class="screen panel hidden">
+    <header class="topbar">
+      <button class="icon-btn back" data-back>←</button>
+      <h2>Ranking</h2>
+      <span></span>
+    </header>
+    <div id="ranking-list" class="list"></div>
+    <div id="ranking-me" class="rank-me"></div>
+  </section>
+
+  <!-- ================= Revive Ad (al morir) ================= -->
+  <div id="overlay-revive" class="overlay hidden">
+    <div class="modal">
+      <h2 class="danger">¡TE ATRAPARON!</h2>
+      <div class="ring">
+        <svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" class="ring-bg" /><circle id="revive-ring" cx="50" cy="50" r="44" class="ring-fg" /></svg>
+        <span id="revive-count">5</span>
+      </div>
+      <button id="btn-revive" class="btn primary big">▶ Continuar desde acá</button>
+      <small id="revive-left" class="muted">Mirando un anuncio · 3 restantes</small>
+      <button id="btn-giveup" class="btn ghost">No, gracias</button>
+    </div>
+  </div>
+
+  <!-- ================= Pausa ================= -->
+  <div id="overlay-pause" class="overlay hidden">
+    <div class="modal">
+      <h2>Pausa</h2>
+      <button id="btn-resume" class="btn primary big">Seguir</button>
+      <button id="btn-quit" class="btn ghost">Terminar partida</button>
+    </div>
+  </div>
+
+  <!-- ================= Fin de partida ================= -->
+  <div id="overlay-gameover" class="overlay hidden">
+    <div class="modal">
+      <h2>Fin de la huida</h2>
+      <div id="go-newbest" class="newbest hidden">¡NUEVO RÉCORD!</div>
+      <div class="stats">
+        <div><small>Distancia</small><b id="go-score">0</b></div>
+        <div><small>Monedas</small><b id="go-coins">0</b></div>
+      </div>
+      <p id="go-detail" class="muted"></p>
+      <!-- Multiplier Ad para la siguiente partida: más impresiones sin molestar -->
+      <button id="go-mult" class="card-btn ad slim">
+        <span class="ad-ico">▶</span>
+        <span class="txt"><b>x2 monedas en la próxima</b><small>Mirá un anuncio</small></span>
+      </button>
+      <button id="btn-again" class="btn primary big">Jugar otra vez</button>
+      <button id="btn-menu" class="btn ghost">Menú</button>
+    </div>
+  </div>
+
+  <!-- ================= Anuncio simulado (solo ADS_PROVIDER=mock) ================= -->
+  <div id="overlay-ad" class="overlay dark hidden">
+    <div class="modal">
+      <small class="muted">ANUNCIO DE PRUEBA</small>
+      <div class="mock-ad"><span id="ad-timer">5</span></div>
+      <button id="ad-close" class="btn primary" disabled>Recompensa en 5s</button>
+      <button id="ad-skip" class="btn ghost">Saltar (sin recompensa)</button>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script type="module" src="/js/main.js"></script>
+</body>
+</html>
